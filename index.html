@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>매입 계약 현황 대시보드</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --accent: #2a78d6;
+    /* 단계(순서형) 색: 1단계 -> 5단계 */
+    --st-1: #86b6ef; --st-2: #5598e7; --st-3: #2a78d6; --st-4: #1c5cab; --st-5: #104281;
+    --hold: #b5b3aa;
+    --pending: #86b6ef;
+    --critical: #d03b3b;
+    --critical-text: #b32d2d;
+    --dot-empty: #c3c2b7;
+    --wash: rgba(11,11,11,0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7;
+      --muted: #898781; --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+      --accent: #3987e5;
+      --st-1: #184f95; --st-2: #256abf; --st-3: #3987e5; --st-4: #6da7ec; --st-5: #86b6ef;
+      --hold: #5d5c57; --pending: #256abf;
+      --critical: #e66767; --critical-text: #e66767; --dot-empty: #4a4a46;
+      --wash: rgba(255,255,255,0.05);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --accent: #3987e5;
+    --st-1: #184f95; --st-2: #256abf; --st-3: #3987e5; --st-4: #6da7ec; --st-5: #86b6ef;
+    --hold: #5d5c57; --pending: #256abf;
+    --critical: #e66767; --critical-text: #e66767; --dot-empty: #4a4a46;
+    --wash: rgba(255,255,255,0.05);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0 0 2px; font-weight: 650; }
+  .sub { color: var(--ink-2); font-size: 13px; }
+  .theme-btn {
+    background: var(--surface); color: var(--ink-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer;
+  }
+  .theme-btn:hover { background: var(--wash); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .card h2 { font-size: 14px; margin: 0 0 2px; font-weight: 650; }
+  .card .hint { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+
+  /* KPI */
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 12px; }
+  .kpi { padding: 14px 16px; }
+  .kpi .label { color: var(--ink-2); font-size: 12.5px; }
+  .kpi .value { font-size: 34px; font-weight: 650; line-height: 1.15; margin-top: 2px; }
+  .kpi .value small { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-left: 3px; }
+  .kpi .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .kpi.alert .value { color: var(--critical-text); }
+  .meter { height: 6px; border-radius: 3px; background: var(--grid); margin-top: 8px; overflow: hidden; }
+  .meter > i { display: block; height: 100%; background: var(--st-4); border-radius: 3px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1.25fr; gap: 12px; margin-bottom: 12px; }
+  .grid-2b { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+  /* 막대 */
+  .bars { display: flex; flex-direction: column; gap: 10px; }
+  .brow { display: grid; grid-template-columns: 150px 1fr 34px; align-items: center; gap: 10px; cursor: default; }
+  .brow.proj { grid-template-columns: minmax(120px, 1.1fr) 2fr 54px; }
+  .blabel { font-size: 12.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btrack { display: flex; gap: 2px; height: 14px; }
+  .bseg { height: 14px; min-width: 0; }
+  .bseg:first-child { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+  .bseg:last-child { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
+  .bval { font-size: 13px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+  .brow:hover .blabel { color: var(--ink); }
+  .brow:hover .btrack { filter: brightness(1.08); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--ink-2); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+  /* 목록 */
+  .list { display: flex; flex-direction: column; }
+  .item { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; padding: 8px 0; border-top: 1px solid var(--grid); align-items: baseline; }
+  .item:first-child { border-top: 0; }
+  .dday { font-weight: 650; font-variant-numeric: tabular-nums; }
+  .dday.soon { color: var(--critical-text); }
+  .item .t { font-size: 13px; }
+  .item .t b { font-weight: 600; }
+  .item .m { color: var(--muted); font-size: 12px; }
+  .item .d { color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+
+  /* 필터 */
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; align-items: center; }
+  .filters input, .filters select {
+    background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 10px; font: inherit; min-width: 130px;
+  }
+  .filters input[type=search] { min-width: 220px; }
+  .filters label { color: var(--ink-2); font-size: 13px; display: inline-flex; gap: 5px; align-items: center; }
+  .count { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+
+  /* 표 */
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 1180px; }
+  th { text-align: left; font-weight: 600; color: var(--ink-2); font-size: 12px; padding: 8px 8px; border-bottom: 1px solid var(--axis); white-space: nowrap; position: sticky; top: 0; background: var(--surface); }
+  td { padding: 9px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  tr.row:hover td { background: var(--wash); }
+  td.proj { color: var(--ink-2); min-width: 170px; max-width: 230px; font-size: 12.5px; }
+  td.cname { min-width: 220px; }
+  td.proj.cont { border-bottom-color: transparent; }
+  tr.grpstart td { border-top: 1px solid var(--axis); }
+  td.vendor { font-weight: 600; white-space: nowrap; }
+  td.cname { max-width: 280px; }
+  td.period, td.dates { white-space: nowrap; color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  td.note { max-width: 260px; color: var(--ink-2); font-size: 12.5px; }
+  .dots { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .gap { width: 8px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; line-height: 1; font-weight: 700; color: #fff; }
+  .dot.O { background: var(--accent); }
+  .dot.sub { background: var(--pending); color: #0b0b0b; }
+  .dot.none { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dot-empty); }
+  .dot.X { background: var(--critical); }
+  .dgroup th { font-size: 11px; color: var(--muted); font-weight: 500; padding-bottom: 2px; border-bottom: 0; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--wash); border: 1px solid var(--border); }
+  .badge i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .flag { display: inline-block; margin-top: 4px; color: var(--critical-text); font-size: 12px; font-weight: 600; }
+  .stepkey { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin: 0 0 10px; align-items: center; }
+  .stepkey .dot { margin-right: 4px; vertical-align: -2px; }
+
+  /* 툴팁 */
+  #tip { position: fixed; z-index: 10; pointer-events: none; max-width: 320px; background: var(--ink); color: var(--surface); padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.45; opacity: 0; transition: opacity .08s; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+  #tip b { font-weight: 650; }
+
+  @media (max-width: 980px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-2b { grid-template-columns: 1fr; }
+  }
+  @media print {
+    body { background: #fff; }
+    .theme-btn, .filters { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>매입 계약 현황 대시보드</h1>
+      <div class="sub">기준일 <span id="today"></span> · 데이터 반영일 <span id="updated"></span> · 내부 공유용</div>
+    </div>
+    <button class="theme-btn" id="themeBtn" type="button">다크 모드</button>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="grid-2">
+    <div class="card">
+      <h2>계약 진행 단계별 건수</h2>
+      <div class="hint">현재 어느 단계까지 진행됐는지 (홀딩 건은 별도)</div>
+      <div class="bars" id="stageBars"></div>
+    </div>
+    <div class="card">
+      <h2>사업별 체결 현황</h2>
+      <div class="hint">사업명별 계약 건수와 체결 완료 비율</div>
+      <div class="bars" id="projBars"></div>
+      <div class="legend" id="projLegend"></div>
+    </div>
+  </section>
+
+  <section class="grid-2b">
+    <div class="card">
+      <h2>계약 종료일 임박 (30일 이내)</h2>
+      <div class="hint">홀딩 제외, 종료일이 가까운 순</div>
+      <div class="list" id="endSoon"></div>
+    </div>
+    <div class="card">
+      <h2>자금 집행(예정)일 다가오는 건 (14일 이내)</h2>
+      <div class="hint">선금·잔금 집행(예정)일 기준</div>
+      <div class="list" id="paySoon"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>전체 계약 목록</h2>
+    <div class="hint">진행 표시는 왼쪽부터 계약 단계 → 선금 단계 → 잔금 단계 순서입니다. 점 위에 마우스를 올리면 항목명이 보입니다.</div>
+    <div class="filters">
+      <input type="search" id="q" placeholder="업체명 · 계약명 · 사업명 · 비고 검색">
+      <select id="fpm"></select>
+      <select id="fstatus"></select>
+      <label><input type="checkbox" id="fissue"> 확인 필요만</label>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="stepkey">
+      <span><span class="dot O"></span>완료</span>
+      <span><span class="dot sub">대</span>각서 등으로 대체</span>
+      <span><span class="dot none"></span>미진행</span>
+      <span><span class="dot X">×</span>문제 · 확인 필요</span>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr class="dgroup">
+            <th colspan="5"></th><th><span>계약 → 선금 → 잔금</span></th><th colspan="4"></th>
+          </tr>
+          <tr>
+            <th>사업명</th><th>업체명</th><th>계약명</th><th>담당 PM</th><th>계약 기간</th>
+            <th>진행 (계약5 · 선금3 · 잔금2)</th><th>현재 상태</th><th>집행(예정)일</th><th>비고</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<div id="tip"></div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  var ROWS = (window.CONTRACTS || []).map(function (r, i) { r.id = i; return r; });
+
+  // ---------- 기준일 ----------
+  function iso(d) { var m = d.getMonth() + 1, day = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day; }
+  var TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
+  function parse(s) { if (!s) return null; var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+  function diffDays(d) { return Math.round((d - TODAY) / 86400000); }
+  document.getElementById('today').textContent = iso(TODAY);
+  document.getElementById('updated').textContent = window.DATA_UPDATED || '-';
+
+  // ---------- 단계 정의 ----------
+  var CONTRACT_STEPS = [['legal', '법무검토 요청'], ['approval', '계약 품의'], ['send', '계약서 송부'], ['receive', '계약서 회수'], ['bond', '계약보증증권']];
+  var ADV_STEPS = [['adv_bond', '선금보증증권'], ['adv_tax', '선금 세금계산서 발행'], ['adv_appr', '선금 자금집행 품의']];
+  var BAL_STEPS = [['bal_tax', '잔금 세금계산서 발행'], ['bal_appr', '잔금 자금집행 품의']];
+  var STAGES = [
+    { key: 1, name: '법무검토 · 품의 전', color: 'var(--st-1)' },
+    { key: 2, name: '품의 완료 · 송부 대기', color: 'var(--st-2)' },
+    { key: 3, name: '송부 완료 · 회수 대기', color: 'var(--st-3)' },
+    { key: 4, name: '회수 완료 · 보증증권 대기', color: 'var(--st-4)' },
+    { key: 5, name: '체결 완료', color: 'var(--st-5)' }
+  ];
+  var HOLD = { key: 0, name: '홀딩', color: 'var(--hold)' };
+  function isDone(v) { return v === 'O' || v === '대체'; }
+
+  function classify(r) {
+    // 가장 멀리 진행된 계약 단계를 기준으로 현재 상태 판정 (엑셀에 앞 단계가 비어 있어도 뒤 단계가 완료면 그 단계로 봄)
+    var last = -1;
+    CONTRACT_STEPS.forEach(function (s, i) { if (isDone(r[s[0]])) last = i; });
+    r.hold = /홀딩/.test(r.note || '');
+    // 법무검토만 했거나 아무것도 없음 -> 1단계, 품의 -> 2, 송부 -> 3, 회수 -> 4, 계약보증증권까지 -> 5(체결 완료)
+    r.stageKey = r.hold ? 0 : (last <= 0 ? 1 : last + 1);
+    var issues = [];
+    CONTRACT_STEPS.concat(ADV_STEPS, BAL_STEPS).forEach(function (s) { if (r[s[0]] === 'X') issues.push(s[1]); });
+    r.issues = issues;
+    r.stage = r.hold ? HOLD : STAGES[r.stageKey - 1];
+  }
+  ROWS.forEach(classify);
+
+  // ---------- 툴팁 ----------
+  var tip = document.getElementById('tip');
+  function showTip(html, e) { tip.innerHTML = html; tip.style.opacity = 1; moveTip(e); }
+  function moveTip(e) {
+    var x = e.clientX + 14, y = e.clientY + 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    if (x + w > window.innerWidth - 8) x = e.clientX - w - 14;
+    if (y + h > window.innerHeight - 8) y = e.clientY - h - 14;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  function hideTip() { tip.style.opacity = 0; }
+  function bindTip(el, html) {
+    el.addEventListener('mouseenter', function (e) { showTip(html, e); });
+    el.addEventListener('mousemove', moveTip);
+    el.addEventListener('mouseleave', hideTip);
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+  // ---------- KPI ----------
+  var total = ROWS.length;
+  var done = ROWS.filter(function (r) { return r.stageKey === 5; }).length;
+  var holds = ROWS.filter(function (r) { return r.hold; }).length;
+  var inprog = total - done - holds;
+  var issueRows = ROWS.filter(function (r) { return r.issues.length; });
+  var pct = total ? Math.round(done / total * 100) : 0;
+  var kpis = document.getElementById('kpis');
+  [
+    { l: '전체 계약', v: total, u: '건', n: '엑셀 등록 기준' },
+    { l: '체결 완료', v: done, u: '건', n: '체결률 ' + pct + '%', meter: pct },
+    { l: '체결 진행 중', v: inprog, u: '건', n: '홀딩 제외' },
+    { l: '홀딩', v: holds, u: '건', n: '진행 보류' },
+    { l: '확인 필요', v: issueRows.length, u: '건', n: 'X 표시(문제·거부) 항목 포함', alert: issueRows.length > 0 }
+  ].forEach(function (k) {
+    var d = el('div', 'card kpi' + (k.alert ? ' alert' : ''));
+    d.innerHTML = '<div class="label">' + k.l + '</div><div class="value">' + k.v + '<small>' + k.u + '</small></div><div class="note">' + k.n + '</div>' +
+      (k.meter != null ? '<div class="meter"><i style="width:' + k.meter + '%"></i></div>' : '');
+    kpis.appendChild(d);
+  });
+
+  // ---------- 단계별 막대 ----------
+  var stageBars = document.getElementById('stageBars');
+  var maxStage = Math.max.apply(null, STAGES.concat([HOLD]).map(function (s) { return ROWS.filter(function (r) { return r.stage === s; }).length; }).concat([1]));
+  STAGES.concat([HOLD]).forEach(function (s) {
+    var rs = ROWS.filter(function (r) { return r.stage === s; });
+    var row = el('div', 'brow');
+    row.innerHTML = '<div class="blabel" title="' + esc(s.name) + '">' + esc(s.name) + '</div>' +
+      '<div class="btrack"><div class="bseg" style="background:' + s.color + ';width:' + (rs.length / maxStage * 100) + '%;' + (rs.length ? '' : 'display:none') + '"></div></div>' +
+      '<div class="bval">' + rs.length + '</div>';
+    var list = rs.slice(0, 8).map(function (r) { return '· ' + esc(r.vendor) + ' - ' + esc(r.name.length > 28 ? r.name.slice(0, 28) + '…' : r.name); }).join('<br>');
+    if (rs.length > 8) list += '<br>… 외 ' + (rs.length - 8) + '건';
+    bindTip(row, '<b>' + esc(s.name) + ' · ' + rs.length + '건</b>' + (list ? '<br>' + list : ''));
+    stageBars.appendChild(row);
+  });
+
+  // ---------- 사업별 막대 ----------
+  var projects = [], pmap = {};
+  ROWS.forEach(function (r) { if (!pmap[r.project]) { pmap[r.project] = []; projects.push(r.project); } pmap[r.project].push(r); });
+  projects.sort(function (a, b) { return pmap[b].length - pmap[a].length; });
+  var maxProj = Math.max.apply(null, projects.map(function (p) { return pmap[p].length; }).concat([1]));
+  var projBars = document.getElementById('projBars');
+  projects.forEach(function (p) {
+    var rs = pmap[p];
+    var d = rs.filter(function (r) { return r.stageKey === 5; }).length;
+    var h = rs.filter(function (r) { return r.hold; }).length;
+    var ip = rs.length - d - h;
+    var unit = 100 / maxProj;
+    var segs = '';
+    if (d) segs += '<div class="bseg" style="background:var(--st-5);width:' + d * unit + '%"></div>';
+    if (ip) segs += '<div class="bseg" style="background:var(--pending);width:' + ip * unit + '%"></div>';
+    if (h) segs += '<div class="bseg" style="background:var(--hold);width:' + h * unit + '%"></div>';
+    var row = el('div', 'brow proj');
+    row.innerHTML = '<div class="blabel" title="' + esc(p) + '">' + esc(p) + '</div><div class="btrack">' + segs + '</div><div class="bval">' + d + '/' + rs.length + '</div>';
+    bindTip(row, '<b>' + esc(p) + '</b><br>총 ' + rs.length + '건 · 체결 완료 ' + d + ' · 진행 중 ' + ip + (h ? ' · 홀딩 ' + h : ''));
+    projBars.appendChild(row);
+  });
+  document.getElementById('projLegend').innerHTML =
+    '<span><i style="background:var(--st-5)"></i>체결 완료</span><span><i style="background:var(--pending)"></i>진행 중</span><span><i style="background:var(--hold)"></i>홀딩</span><span style="color:var(--muted)">오른쪽 숫자: 체결 완료 / 전체</span>';
+
+  // ---------- 임박 목록 ----------
+  function ddayText(n) { return n === 0 ? 'D-DAY' : n > 0 ? 'D-' + n : 'D+' + (-n); }
+  function fillList(id, items, emptyMsg) {
+    var box = document.getElementById(id);
+    if (!items.length) { box.appendChild(el('div', 'empty', emptyMsg)); return; }
+    items.forEach(function (it) {
+      var d = el('div', 'item');
+      d.innerHTML = '<div class="dday' + (it.n <= 7 ? ' soon' : '') + '">' + ddayText(it.n) + '</div>' +
+        '<div class="t"><b>' + esc(it.r.vendor) + '</b> · ' + esc(it.r.name) + '<div class="m">' + esc(it.sub) + '</div></div>' +
+        '<div class="d">' + esc(it.date) + '</div>';
+      box.appendChild(d);
+    });
+  }
+  var ends = ROWS.filter(function (r) { return !r.hold && parse(r.end); })
+    .map(function (r) { return { r: r, n: diffDays(parse(r.end)), date: r.end, sub: '종료일 · ' + r.stage.name }; })
+    .filter(function (x) { return x.n >= 0 && x.n <= 30; })
+    .sort(function (a, b) { return a.n - b.n; });
+  fillList('endSoon', ends, '30일 이내 종료되는 계약이 없습니다.');
+  var pays = [];
+  ROWS.forEach(function (r) {
+    [['adv_date', '선금'], ['bal_date', '잔금']].forEach(function (p) {
+      var d = parse(r[p[0]]);
+      if (d) { var n = diffDays(d); if (n >= 0 && n <= 14) pays.push({ r: r, n: n, date: r[p[0]], sub: p[1] + ' 집행(예정)' }); }
+    });
+  });
+  pays.sort(function (a, b) { return a.n - b.n; });
+  fillList('paySoon', pays, '14일 이내 집행 예정인 건이 없습니다.');
+
+  // ---------- 필터 ----------
+  var pms = []; ROWS.forEach(function (r) { if (r.pm && pms.indexOf(r.pm) < 0) pms.push(r.pm); });
+  var fpm = document.getElementById('fpm'), fstatus = document.getElementById('fstatus');
+  fpm.innerHTML = '<option value="">담당 PM 전체</option>' + pms.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('');
+  fstatus.innerHTML = '<option value="">현재 상태 전체</option>' + STAGES.concat([HOLD]).map(function (s) { return '<option value="' + s.key + '">' + esc(s.name) + '</option>'; }).join('');
+
+  // ---------- 표 ----------
+  var tbody = document.getElementById('tbody');
+  function dot(r, s) {
+    var v = r[s[0]], cls = v === 'O' ? 'O' : v === 'X' ? 'X' : v === '대체' ? 'sub' : 'none';
+    var txt = v === 'X' ? '×' : v === '대체' ? '대' : '';
+    var label = s[1] + ': ' + (v === 'O' ? '완료' : v === 'X' ? '문제 · 확인 필요' : v === '대체' ? '각서 등으로 대체' : '미진행');
+    return '<span class="dot ' + cls + '" title="' + esc(label) + '">' + txt + '</span>';
+  }
+  function fmtPeriod(r) { return (r.start || r.end) ? esc(r.start || '?') + ' ~ ' + esc(r.end || '?') : '<span style="color:var(--muted)">미정</span>'; }
+  function fmtDates(r) {
+    var out = [];
+    if (r.adv_date) out.push('선금 ' + esc(r.adv_date));
+    if (r.bal_date) out.push('잔금 ' + esc(r.bal_date));
+    return out.length ? out.join('<br>') : '<span style="color:var(--muted)">-</span>';
+  }
+  function render() {
+    var q = document.getElementById('q').value.trim().toLowerCase();
+    var pm = fpm.value, st = fstatus.value, onlyIssue = document.getElementById('fissue').checked;
+    var vis = ROWS.filter(function (r) {
+      if (pm && r.pm !== pm) return false;
+      if (st !== '' && String(r.stageKey) !== st) return false;
+      if (onlyIssue && !r.issues.length) return false;
+      if (q && (r.vendor + ' ' + r.name + ' ' + r.project + ' ' + r.note).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+    tbody.innerHTML = '';
+    var prev = null;
+    vis.forEach(function (r) {
+      var first = r.project !== prev; prev = r.project;
+      var tr = el('tr', 'row' + (first ? ' grpstart' : ''));
+      var dots = '<div class="dots">' + CONTRACT_STEPS.map(function (s) { return dot(r, s); }).join('') + '<span class="gap"></span>' +
+        ADV_STEPS.map(function (s) { return dot(r, s); }).join('') + '<span class="gap"></span>' + BAL_STEPS.map(function (s) { return dot(r, s); }).join('') + '</div>';
+      var badge = '<span class="badge"><i style="background:' + r.stage.color + '"></i>' + esc(r.stage.name) + '</span>' +
+        (r.issues.length ? '<br><span class="flag">▲ 확인 필요: ' + esc(r.issues.join(', ')) + '</span>' : '');
+      tr.innerHTML = '<td class="proj' + (first ? '' : ' cont') + '">' + (first ? esc(r.project) : '') + '</td>' +
+        '<td class="vendor">' + esc(r.vendor) + '</td><td class="cname">' + esc(r.name) + '</td><td>' + esc(r.pm) + '</td>' +
+        '<td class="period">' + fmtPeriod(r) + '</td><td>' + dots + '</td><td>' + badge + '</td>' +
+        '<td class="dates">' + fmtDates(r) + '</td><td class="note">' + esc(r.note) + '</td>';
+      tbody.appendChild(tr);
+    });
+    if (!vis.length) tbody.innerHTML = '<tr><td colspan="9" class="empty">조건에 맞는 계약이 없습니다.</td></tr>';
+    document.getElementById('count').textContent = vis.length + ' / ' + total + '건';
+  }
+  ['q', 'fpm', 'fstatus', 'fissue'].forEach(function (id) {
+    var e = document.getElementById(id); e.addEventListener('input', render); e.addEventListener('change', render);
+  });
+  render();
+
+  // ---------- 테마 ----------
+  var btn = document.getElementById('themeBtn');
+  function applyTheme(t) {
+    if (t) document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme');
+    var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    btn.textContent = dark ? '라이트 모드' : '다크 모드';
+  }
+  var saved = null; try { saved = localStorage.getItem('theme'); } catch (e) {}
+  applyTheme(saved);
+  btn.addEventListener('click', function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark';
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    applyTheme(next);
+  });
+})();
+</script>
+</body>
+</html>
