@@ -40,7 +40,18 @@
 
 셀에 `X` 가 있으면 "확인 필요"로 표시됩니다.
 
+## 디자인 토큰
+색상·간격·글자 크기·라운드는 `index.html` 맨 위 `<style>`의 `:root` CSS 변수로 관리합니다. Dark 모드는 같은 변수 이름에 다른 값을 넣어 정의합니다.
+
+| 구분 | 변수 | 비고 |
+|---|---|---|
+| 상태 색 | `--done` / `--progress` / `--hold` / `--danger` | 체결 완료 / 진행 중 / 홀딩 / 확인 필요 (의미 고정) |
+| 단계 램프 | `--st-1` ~ `--st-5` | 1단계(연한 블루) → 체결 완료(짙은 블루) |
+| 간격 | `--sp-1` ~ `--sp-8` | 4px 단위 |
+| 글자 | `--fs-title` `--fs-section` `--fs-kpi` `--fs-body` `--fs-sub` `--fs-meta` | Pretendard Variable 사용 |
+
 ## 파일 구성
 - `index.html` : 대시보드 화면
 - `data.js` : 엑셀에서 변환된 데이터 (자동 생성)
 - `scripts/build_data.py` : 엑셀 → `data.js` 변환 스크립트
+- `fonts/` : Pretendard Variable 글꼴 (SIL OFL 1.1 라이선스, 같은 폴더의 라이선스 파일 참고)

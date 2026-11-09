@@ -4,160 +4,361 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
 <title>매입 계약 현황 대시보드</title>
 <style>
+  @font-face {
+    font-family: "Pretendard Variable";
+    src: url("fonts/PretendardVariable.woff2") format("woff2-variations");
+    font-weight: 45 920;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  /* =====================================================================
+     디자인 토큰
+     - 색상 / 간격(4px 기반) / 라운드 / 타이포를 모두 변수로 관리합니다.
+     - Dark 모드는 같은 토큰 이름에 값만 바꿔서 정의합니다.
+     ===================================================================== */
   :root {
     color-scheme: light;
-    --page: #f9f9f7;
-    --surface: #fcfcfb;
-    --ink: #0b0b0b;
-    --ink-2: #52514e;
-    --muted: #898781;
-    --grid: #e1e0d9;
-    --axis: #c3c2b7;
-    --border: rgba(11,11,11,0.10);
-    --accent: #2a78d6;
-    /* 단계(순서형) 색: 1단계 -> 5단계 */
-    --st-1: #86b6ef; --st-2: #5598e7; --st-3: #2a78d6; --st-4: #1c5cab; --st-5: #104281;
-    --hold: #b5b3aa;
-    --pending: #86b6ef;
-    --critical: #d03b3b;
-    --critical-text: #b32d2d;
-    --dot-empty: #c3c2b7;
-    --wash: rgba(11,11,11,0.04);
+
+    /* 타이포그래피 */
+    --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+            "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
+    --fs-title: 24px;     /* 페이지 타이틀 700 */
+    --fs-section: 16px;   /* 섹션 타이틀 600 */
+    --fs-kpi: 32px;       /* KPI 숫자 600 */
+    --fs-body: 13.5px;    /* 본문 */
+    --fs-sub: 12.5px;     /* 보조 설명 */
+    --fs-meta: 12px;      /* 메타데이터 */
+
+    /* 간격 (4px 단위) */
+    --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+    --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
+
+    /* 형태 */
+    --radius: 10px;       /* 카드 */
+    --radius-sm: 6px;     /* 칩, 입력 보조 */
+    --radius-ctl: 8px;    /* 버튼, 입력 */
+
+    /* 중립 색상 */
+    --bg: #F8F9FB;
+    --surface: #FFFFFF;
+    --text: #111827;
+    --text-2: #6B7280;
+    --border: #E5E7EB;
+    --border-strong: #D1D5DB;
+    --hover: #F3F4F6;
+    --pressed: #E5E7EB;
+
+    /* 포인트 */
+    --accent: #2563EB;
+    --accent-soft: #EFF6FF;
+    --focus-ring: rgba(37, 99, 235, 0.28);
+
+    /* 상태 색상 (의미 고정) */
+    --done: #1E3A8A;         /* 체결 완료: 짙은 블루 */
+    --progress: #7FB0F6;     /* 진행 중: 밝은 블루 */
+    --hold: #A3AAB5;         /* 홀딩: 중립 그레이 */
+    --danger: #B91C1C;       /* 확인 필요 · 위험 */
+    --danger-soft: #FEF2F2;
+
+    /* 단계 램프 (1단계 -> 체결 완료, 연한 블루 -> 짙은 블루) */
+    --st-1: #8DB9F8; --st-2: #5E9AF2; --st-3: #2F72E6; --st-4: #1E4FC0; --st-5: #1E3A8A;
+
+    /* 툴팁 */
+    --tip-bg: #111827;
+    --tip-text: #F9FAFB;
+    --tip-text-2: #AEB6C4;
+    --tip-border: transparent;
+
+    /* 진행 점 */
+    --dot-empty: #CBD0D8;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
       color-scheme: dark;
-      --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7;
-      --muted: #898781; --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
-      --accent: #3987e5;
-      --st-1: #184f95; --st-2: #256abf; --st-3: #3987e5; --st-4: #6da7ec; --st-5: #86b6ef;
-      --hold: #5d5c57; --pending: #256abf;
-      --critical: #e66767; --critical-text: #e66767; --dot-empty: #4a4a46;
-      --wash: rgba(255,255,255,0.05);
+      --bg: #0B0E14;
+      --surface: #12161D;
+      --text: #E8EAED;
+      --text-2: #9AA3B2;
+      --border: #232A35;
+      --border-strong: #323B49;
+      --hover: #1A202A;
+      --pressed: #232B37;
+      --accent: #6B9BFF;
+      --accent-soft: #16233D;
+      --focus-ring: rgba(107, 155, 255, 0.35);
+      --done: #2A63DB;
+      --progress: #A9C7FB;
+      --hold: #5A6372;
+      --danger: #F87171;
+      --danger-soft: #2A1517;
+      --st-1: #A9C7FB; --st-2: #86AEF7; --st-3: #5F92F3; --st-4: #3F78EE; --st-5: #2A63DB;
+      --tip-bg: #1E2530;
+      --tip-text: #E8EAED;
+      --tip-text-2: #9AA3B2;
+      --tip-border: #323B49;
+      --dot-empty: #3C4553;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7;
-    --muted: #898781; --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
-    --accent: #3987e5;
-    --st-1: #184f95; --st-2: #256abf; --st-3: #3987e5; --st-4: #6da7ec; --st-5: #86b6ef;
-    --hold: #5d5c57; --pending: #256abf;
-    --critical: #e66767; --critical-text: #e66767; --dot-empty: #4a4a46;
-    --wash: rgba(255,255,255,0.05);
+    --bg: #0B0E14;
+    --surface: #12161D;
+    --text: #E8EAED;
+    --text-2: #9AA3B2;
+    --border: #232A35;
+    --border-strong: #323B49;
+    --hover: #1A202A;
+    --pressed: #232B37;
+    --accent: #6B9BFF;
+    --accent-soft: #16233D;
+    --focus-ring: rgba(107, 155, 255, 0.35);
+    --done: #2A63DB;
+    --progress: #A9C7FB;
+    --hold: #5A6372;
+    --danger: #F87171;
+    --danger-soft: #2A1517;
+    --st-1: #A9C7FB; --st-2: #86AEF7; --st-3: #5F92F3; --st-4: #3F78EE; --st-5: #2A63DB;
+    --tip-bg: #1E2530;
+    --tip-text: #E8EAED;
+    --tip-text-2: #9AA3B2;
+    --tip-border: #323B49;
+    --dot-empty: #3C4553;
   }
 
+  /* ===================== 기본 ===================== */
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0; background: var(--page); color: var(--ink);
-    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 400 var(--fs-body)/1.55 var(--font);
+    letter-spacing: -0.003em;
+    -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 20px 60px; }
-  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
-  h1 { font-size: 22px; margin: 0 0 2px; font-weight: 650; }
-  .sub { color: var(--ink-2); font-size: 13px; }
-  .theme-btn {
-    background: var(--surface); color: var(--ink-2); border: 1px solid var(--border);
-    border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer;
+  .num { font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .wrap { max-width: 1360px; margin: 0 auto; padding: var(--sp-8) var(--sp-8) 64px; }
+
+  /* ===================== 헤더 ===================== */
+  header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-6);
   }
-  .theme-btn:hover { background: var(--wash); }
+  h1 { margin: 0; font-size: var(--fs-title); line-height: 1.3; font-weight: 700; letter-spacing: -0.02em; }
+  .meta { margin-top: var(--sp-1); color: var(--text-2); font-size: var(--fs-meta); }
+  .meta .sep { margin: 0 var(--sp-2); color: var(--border-strong); }
+  .btn {
+    height: 32px; padding: 0 var(--sp-3);
+    background: var(--surface); color: var(--text-2);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-ctl);
+    font: 500 var(--fs-sub)/1 var(--font); cursor: pointer;
+  }
+  .btn:hover { background: var(--hover); color: var(--text); }
+  .btn:active { background: var(--pressed); }
 
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
-  .card h2 { font-size: 14px; margin: 0 0 2px; font-weight: 650; }
-  .card .hint { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+  /* ===================== 카드 ===================== */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--sp-6);
+    min-width: 0;
+  }
+  .card-head { margin-bottom: var(--sp-5); }
+  .card-head h2 { margin: 0; font-size: var(--fs-section); line-height: 1.4; font-weight: 600; letter-spacing: -0.01em; }
+  .card-head .hint { margin-top: var(--sp-1); color: var(--text-2); font-size: var(--fs-sub); }
 
-  /* KPI */
-  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 12px; }
-  .kpi { padding: 14px 16px; }
-  .kpi .label { color: var(--ink-2); font-size: 12.5px; }
-  .kpi .value { font-size: 34px; font-weight: 650; line-height: 1.15; margin-top: 2px; }
-  .kpi .value small { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-left: 3px; }
-  .kpi .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .kpi.alert .value { color: var(--critical-text); }
-  .meter { height: 6px; border-radius: 3px; background: var(--grid); margin-top: 8px; overflow: hidden; }
-  .meter > i { display: block; height: 100%; background: var(--st-4); border-radius: 3px; }
+  .section { margin-bottom: var(--sp-6); }
+  .row-gap { display: grid; gap: var(--sp-4); }
 
-  .grid-2 { display: grid; grid-template-columns: 1fr 1.25fr; gap: 12px; margin-bottom: 12px; }
-  .grid-2b { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  /* ===================== KPI ===================== */
+  .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp-4); }
+  .kpi { padding: var(--sp-5); display: flex; flex-direction: column; }
+  .kpi .label { color: var(--text-2); font-size: var(--fs-sub); font-weight: 500; }
+  .kpi .value {
+    margin-top: var(--sp-2);
+    font-size: var(--fs-kpi); line-height: 1.1; font-weight: 600; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi .value small { margin-left: var(--sp-1); font-size: 14px; font-weight: 500; color: var(--text-2); letter-spacing: 0; }
+  .kpi .note { margin-top: var(--sp-2); color: var(--text-2); font-size: var(--fs-meta); }
+  .kpi.alert .value { color: var(--danger); }
+  .meter { height: 4px; border-radius: 2px; background: var(--border); margin-top: var(--sp-3); overflow: hidden; }
+  .meter > i { display: block; height: 100%; background: var(--done); border-radius: 2px; }
 
-  /* 막대 */
-  .bars { display: flex; flex-direction: column; gap: 10px; }
-  .brow { display: grid; grid-template-columns: 150px 1fr 34px; align-items: center; gap: 10px; cursor: default; }
-  .brow.proj { grid-template-columns: minmax(120px, 1.1fr) 2fr 54px; }
-  .blabel { font-size: 12.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .btrack { display: flex; gap: 2px; height: 14px; }
-  .bseg { height: 14px; min-width: 0; }
-  .bseg:first-child { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
-  .bseg:last-child { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
-  .bval { font-size: 13px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
-  .brow:hover .blabel { color: var(--ink); }
-  .brow:hover .btrack { filter: brightness(1.08); }
-  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--ink-2); }
-  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  /* ===================== 차트 영역 ===================== */
+  .grid-charts { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--sp-4); align-items: stretch; }
+  .grid-lists  { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); }
+  .card.col { display: flex; flex-direction: column; }
 
-  /* 목록 */
+  .bars { display: flex; flex-direction: column; flex: 1; }
+  .brow {
+    display: grid; align-items: center; column-gap: var(--sp-4);
+    padding: var(--sp-2) var(--sp-2); margin: 0 calc(var(--sp-2) * -1);
+    border-radius: var(--radius-sm); cursor: default;
+  }
+  .brow:hover { background: var(--hover); }
+  .bars.stage .brow { grid-template-columns: minmax(0, 176px) minmax(0, 1fr) 32px; flex: 1; min-height: 44px; }
+  .bars.stage .brow + .brow { border-top: 1px solid var(--border); border-top-left-radius: 0; border-top-right-radius: 0; }
+  .bars.proj .brow  { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) 40px; min-height: 36px; }
+  .blabel {
+    color: var(--text-2); font-size: var(--fs-sub); line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+  .brow:hover .blabel { color: var(--text); }
+  .btrack { display: flex; gap: 2px; height: 10px; }
+  .bseg { height: 10px; min-width: 0; }
+  .bseg:first-child { border-top-left-radius: 3px; border-bottom-left-radius: 3px; }
+  .bseg:last-child  { border-top-right-radius: 3px; border-bottom-right-radius: 3px; }
+  .bval { text-align: right; font-size: var(--fs-body); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .legend {
+    display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: center;
+    margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--border);
+    font-size: var(--fs-meta); color: var(--text-2);
+  }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+  .legend .grow { margin-left: auto; }
+
+  /* ===================== 목록 (종료일 / 집행일) ===================== */
   .list { display: flex; flex-direction: column; }
-  .item { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; padding: 8px 0; border-top: 1px solid var(--grid); align-items: baseline; }
-  .item:first-child { border-top: 0; }
-  .dday { font-weight: 650; font-variant-numeric: tabular-nums; }
-  .dday.soon { color: var(--critical-text); }
-  .item .t { font-size: 13px; }
-  .item .t b { font-weight: 600; }
-  .item .m { color: var(--muted); font-size: 12px; }
-  .item .d { color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
-
-  /* 필터 */
-  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; align-items: center; }
-  .filters input, .filters select {
-    background: var(--surface); color: var(--ink); border: 1px solid var(--border);
-    border-radius: 8px; padding: 7px 10px; font: inherit; min-width: 130px;
+  .item {
+    display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; column-gap: var(--sp-4); align-items: start;
+    padding: var(--sp-3) var(--sp-2); margin: 0 calc(var(--sp-2) * -1);
+    border-top: 1px solid var(--border);
   }
-  .filters input[type=search] { min-width: 220px; }
-  .filters label { color: var(--ink-2); font-size: 13px; display: inline-flex; gap: 5px; align-items: center; }
-  .count { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+  .item:first-child { border-top: 0; }
+  .item:hover { background: var(--hover); }
+  .dday {
+    display: inline-flex; justify-content: center; align-items: center;
+    height: 22px; min-width: 48px; padding: 0 var(--sp-2);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    font-size: var(--fs-meta); font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums;
+  }
+  .dday.soon { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+  .item .t { min-width: 0; }
+  .item .t .name {
+    font-size: var(--fs-body); line-height: 1.45;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+  }
+  .item .t .name b { font-weight: 600; }
+  .item .t .name span { color: var(--text-2); }
+  .item .m { margin-top: 2px; color: var(--text-2); font-size: var(--fs-meta); }
+  .item .d { padding-top: 2px; color: var(--text-2); font-size: var(--fs-sub); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .empty { color: var(--text-2); font-size: var(--fs-body); padding: var(--sp-3) 0; }
 
-  /* 표 */
-  .tablewrap { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 1180px; }
-  th { text-align: left; font-weight: 600; color: var(--ink-2); font-size: 12px; padding: 8px 8px; border-bottom: 1px solid var(--axis); white-space: nowrap; position: sticky; top: 0; background: var(--surface); }
-  td { padding: 9px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
-  tr.row:hover td { background: var(--wash); }
-  td.proj { color: var(--ink-2); min-width: 170px; max-width: 230px; font-size: 12.5px; }
-  td.cname { min-width: 220px; }
-  td.proj.cont { border-bottom-color: transparent; }
-  tr.grpstart td { border-top: 1px solid var(--axis); }
+  /* ===================== 필터 ===================== */
+  .filters { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; margin-bottom: var(--sp-4); }
+  .filters input[type=search], .filters select {
+    height: 36px; padding: 0 var(--sp-3);
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-ctl);
+    font: 400 var(--fs-body)/1 var(--font);
+  }
+  .filters input[type=search] { width: 280px; }
+  .filters select { min-width: 148px; }
+  .filters input::placeholder { color: var(--text-2); opacity: .8; }
+  .filters input[type=search]:hover, .filters select:hover { border-color: var(--text-2); }
+  .filters input[type=search]:focus, .filters select:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+  .filters label {
+    display: inline-flex; gap: 6px; align-items: center; height: 36px; padding: 0 var(--sp-2);
+    color: var(--text-2); font-size: var(--fs-sub); cursor: pointer; border-radius: var(--radius-ctl);
+  }
+  .filters label:hover { background: var(--hover); color: var(--text); }
+  .filters input[type=checkbox] { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
+  .count { margin-left: auto; color: var(--text-2); font-size: var(--fs-sub); font-variant-numeric: tabular-nums; }
+
+  .stepkey {
+    display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: center;
+    margin-bottom: var(--sp-3); font-size: var(--fs-meta); color: var(--text-2);
+  }
+  .stepkey > span { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* ===================== 표 ===================== */
+  .tablewrap { overflow-x: auto; border-top: 1px solid var(--border); }
+  table { border-collapse: collapse; width: 100%; font-size: var(--fs-body); min-width: 1080px; }
+  th {
+    position: sticky; top: 0; background: var(--surface);
+    text-align: left; white-space: nowrap;
+    padding: var(--sp-3) var(--sp-2); border-bottom: 1px solid var(--border-strong);
+    font-size: var(--fs-meta); font-weight: 600; color: var(--text-2);
+  }
+  td { padding: var(--sp-3) var(--sp-2); border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr.row:hover td { background: var(--hover); }
+  tr.grpstart td { border-top: 1px solid var(--border-strong); }
+  tr.grpstart:first-child td { border-top: 0; }
+  td.proj { min-width: 128px; max-width: 190px; color: var(--text); font-size: var(--fs-sub); font-weight: 500; line-height: 1.45; }
+  td.proj.cont { color: transparent; }
   td.vendor { font-weight: 600; white-space: nowrap; }
-  td.cname { max-width: 280px; }
-  td.period, td.dates { white-space: nowrap; color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 12.5px; }
-  td.note { max-width: 260px; color: var(--ink-2); font-size: 12.5px; }
-  .dots { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  td.cname { min-width: 160px; max-width: 260px; }
+  td.pm { color: var(--text-2); font-size: var(--fs-sub); min-width: 68px; }
+  td.period, td.dates { color: var(--text-2); font-size: var(--fs-sub); font-variant-numeric: tabular-nums; }
+  td.period { width: 108px; line-height: 1.5; }
+  td.dates { white-space: nowrap; }
+  td.note { min-width: 140px; max-width: 240px; color: var(--text-2); font-size: var(--fs-sub); line-height: 1.5; }
+  td .dim { color: var(--text-2); opacity: .7; }
+
+  .dots { display: flex; align-items: center; gap: 3px; white-space: nowrap; height: 22px; }
   .gap { width: 8px; }
-  .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; line-height: 1; font-weight: 700; color: #fff; }
+  .dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 8px; line-height: 1; font-weight: 700; color: #fff; flex: none;
+  }
   .dot.O { background: var(--accent); }
-  .dot.sub { background: var(--pending); color: #0b0b0b; }
+  .dot.sub { background: var(--st-1); color: #0B1F44; }
   .dot.none { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dot-empty); }
-  .dot.X { background: var(--critical); }
-  .dgroup th { font-size: 11px; color: var(--muted); font-weight: 500; padding-bottom: 2px; border-bottom: 0; }
-  .badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--wash); border: 1px solid var(--border); }
-  .badge i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .flag { display: inline-block; margin-top: 4px; color: var(--critical-text); font-size: 12px; font-weight: 600; }
-  .stepkey { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin: 0 0 10px; align-items: center; }
-  .stepkey .dot { margin-right: 4px; vertical-align: -2px; }
+  .dot.X { background: var(--danger); color: #fff; }
 
-  /* 툴팁 */
-  #tip { position: fixed; z-index: 10; pointer-events: none; max-width: 320px; background: var(--ink); color: var(--surface); padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.45; opacity: 0; transition: opacity .08s; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
-  #tip b { font-weight: 650; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 var(--sp-2);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    font-size: var(--fs-meta); font-weight: 500; white-space: nowrap; color: var(--text); background: var(--surface);
+  }
+  .badge i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex: none; }
+  .flag { display: block; margin-top: 6px; color: var(--danger); font-size: var(--fs-meta); font-weight: 500; line-height: 1.4; }
 
-  @media (max-width: 980px) {
-    .kpis { grid-template-columns: repeat(2, 1fr); }
-    .grid-2, .grid-2b { grid-template-columns: 1fr; }
+  /* ===================== 툴팁 ===================== */
+  #tip {
+    position: fixed; z-index: 10; pointer-events: none; width: max-content; max-width: 320px;
+    background: var(--tip-bg); color: var(--tip-text);
+    border: 1px solid var(--tip-border); border-radius: var(--radius-ctl);
+    padding: var(--sp-3); opacity: 0; transition: opacity .08s;
+    font-size: var(--fs-sub); line-height: 1.5;
+  }
+  #tip .tip-title { font-weight: 600; font-size: var(--fs-sub); overflow-wrap: anywhere; }
+  #tip .tip-main { margin-top: var(--sp-1); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  #tip .tip-lines { margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid rgba(255,255,255,.14); color: var(--tip-text-2); font-size: var(--fs-meta); }
+  #tip .tip-lines div + div { margin-top: 2px; }
+
+  /* ===================== 반응형 ===================== */
+  @media (max-width: 1100px) {
+    .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-charts { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 860px) {
+    .wrap { padding: var(--sp-6) var(--sp-4) 48px; }
+    .grid-lists { grid-template-columns: minmax(0, 1fr); }
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .kpis > :last-child:nth-child(odd) { grid-column: span 2; }
+    .card { padding: var(--sp-5); }
+    .bars.stage .brow { grid-template-columns: minmax(0, 132px) minmax(0, 1fr) 28px; }
+    .filters input[type=search] { width: 100%; }
+    .count { margin-left: 0; width: 100%; }
   }
   @media print {
     body { background: #fff; }
-    .theme-btn, .filters { display: none; }
+    .btn, .filters { display: none; }
+    .card { break-inside: avoid; }
   }
 </style>
 </head>
@@ -166,47 +367,57 @@
   <header>
     <div>
       <h1>매입 계약 현황 대시보드</h1>
-      <div class="sub">기준일 <span id="today"></span> · 데이터 반영일 <span id="updated"></span> · 내부 공유용</div>
+      <div class="meta">기준일 <span class="num" id="today"></span><span class="sep">|</span>데이터 반영일 <span class="num" id="updated"></span><span class="sep">|</span>내부 공유용</div>
     </div>
-    <button class="theme-btn" id="themeBtn" type="button">다크 모드</button>
+    <button class="btn" id="themeBtn" type="button">다크 모드</button>
   </header>
 
-  <section class="kpis" id="kpis"></section>
+  <section class="section kpis" id="kpis"></section>
 
-  <section class="grid-2">
-    <div class="card">
-      <h2>계약 진행 단계별 건수</h2>
-      <div class="hint">현재 어느 단계까지 진행됐는지 (홀딩 건은 별도)</div>
-      <div class="bars" id="stageBars"></div>
+  <section class="section grid-charts">
+    <div class="card col">
+      <div class="card-head">
+        <h2>계약 진행 단계별 건수</h2>
+        <div class="hint">현재 어느 단계까지 진행됐는지 (홀딩 건은 별도)</div>
+      </div>
+      <div class="bars stage" id="stageBars"></div>
     </div>
-    <div class="card">
-      <h2>사업별 체결 현황</h2>
-      <div class="hint">사업명별 계약 건수와 체결 완료 비율</div>
-      <div class="bars" id="projBars"></div>
+    <div class="card col">
+      <div class="card-head">
+        <h2>사업별 체결 현황</h2>
+        <div class="hint">사업명별 계약 건수와 체결 완료 비율</div>
+      </div>
+      <div class="bars proj" id="projBars"></div>
       <div class="legend" id="projLegend"></div>
     </div>
   </section>
 
-  <section class="grid-2b">
+  <section class="section grid-lists">
     <div class="card">
-      <h2>계약 종료일 임박 (30일 이내)</h2>
-      <div class="hint">홀딩 제외, 종료일이 가까운 순</div>
+      <div class="card-head">
+        <h2>계약 종료일 임박 (30일 이내)</h2>
+        <div class="hint">홀딩 제외, 종료일이 가까운 순</div>
+      </div>
       <div class="list" id="endSoon"></div>
     </div>
     <div class="card">
-      <h2>자금 집행(예정)일 다가오는 건 (14일 이내)</h2>
-      <div class="hint">선금·잔금 집행(예정)일 기준</div>
+      <div class="card-head">
+        <h2>자금 집행(예정)일 다가오는 건 (14일 이내)</h2>
+        <div class="hint">선금·잔금 집행(예정)일 기준</div>
+      </div>
       <div class="list" id="paySoon"></div>
     </div>
   </section>
 
   <section class="card">
-    <h2>전체 계약 목록</h2>
-    <div class="hint">진행 표시는 왼쪽부터 계약 단계 → 선금 단계 → 잔금 단계 순서입니다. 점 위에 마우스를 올리면 항목명이 보입니다.</div>
+    <div class="card-head">
+      <h2>전체 계약 목록</h2>
+      <div class="hint">진행 표시는 왼쪽부터 계약 단계 → 선금 단계 → 잔금 단계 순서입니다. 점 위에 마우스를 올리면 항목명이 보입니다.</div>
+    </div>
     <div class="filters">
-      <input type="search" id="q" placeholder="업체명 · 계약명 · 사업명 · 비고 검색">
-      <select id="fpm"></select>
-      <select id="fstatus"></select>
+      <input type="search" id="q" placeholder="업체명 · 계약명 · 사업명 · 비고 검색" aria-label="검색">
+      <select id="fpm" aria-label="담당 PM"></select>
+      <select id="fstatus" aria-label="현재 상태"></select>
       <label><input type="checkbox" id="fissue"> 확인 필요만</label>
       <span class="count" id="count"></span>
     </div>
@@ -219,9 +430,6 @@
     <div class="tablewrap">
       <table>
         <thead>
-          <tr class="dgroup">
-            <th colspan="5"></th><th><span>계약 → 선금 → 잔금</span></th><th colspan="4"></th>
-          </tr>
           <tr>
             <th>사업명</th><th>업체명</th><th>계약명</th><th>담당 PM</th><th>계약 기간</th>
             <th>진행 (계약5 · 선금3 · 잔금2)</th><th>현재 상태</th><th>집행(예정)일</th><th>비고</th>
@@ -232,7 +440,7 @@
     </div>
   </section>
 </div>
-<div id="tip"></div>
+<div id="tip" role="tooltip"></div>
 
 <script src="data.js"></script>
 <script>
@@ -282,13 +490,19 @@
     var x = e.clientX + 14, y = e.clientY + 14, w = tip.offsetWidth, h = tip.offsetHeight;
     if (x + w > window.innerWidth - 8) x = e.clientX - w - 14;
     if (y + h > window.innerHeight - 8) y = e.clientY - h - 14;
-    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+    tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px';
   }
   function hideTip() { tip.style.opacity = 0; }
   function bindTip(el, html) {
     el.addEventListener('mouseenter', function (e) { showTip(html, e); });
     el.addEventListener('mousemove', moveTip);
     el.addEventListener('mouseleave', hideTip);
+  }
+  // 툴팁 구성: 제목 -> 주요 수치 -> 상세 정보
+  function tipHtml(title, main, lines) {
+    return '<div class="tip-title">' + title + '</div>' +
+      (main ? '<div class="tip-main">' + main + '</div>' : '') +
+      (lines && lines.length ? '<div class="tip-lines">' + lines.map(function (l) { return '<div>' + l + '</div>'; }).join('') + '</div>' : '');
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
@@ -309,8 +523,9 @@
     { l: '확인 필요', v: issueRows.length, u: '건', n: 'X 표시(문제·거부) 항목 포함', alert: issueRows.length > 0 }
   ].forEach(function (k) {
     var d = el('div', 'card kpi' + (k.alert ? ' alert' : ''));
-    d.innerHTML = '<div class="label">' + k.l + '</div><div class="value">' + k.v + '<small>' + k.u + '</small></div><div class="note">' + k.n + '</div>' +
-      (k.meter != null ? '<div class="meter"><i style="width:' + k.meter + '%"></i></div>' : '');
+    d.innerHTML = '<div class="label">' + k.l + '</div><div class="value">' + k.v + '<small>' + k.u + '</small></div>' +
+      (k.meter != null ? '<div class="meter" role="img" aria-label="체결률 ' + k.meter + '%"><i style="width:' + k.meter + '%"></i></div>' : '') +
+      '<div class="note">' + k.n + '</div>';
     kpis.appendChild(d);
   });
 
@@ -323,9 +538,9 @@
     row.innerHTML = '<div class="blabel" title="' + esc(s.name) + '">' + esc(s.name) + '</div>' +
       '<div class="btrack"><div class="bseg" style="background:' + s.color + ';width:' + (rs.length / maxStage * 100) + '%;' + (rs.length ? '' : 'display:none') + '"></div></div>' +
       '<div class="bval">' + rs.length + '</div>';
-    var list = rs.slice(0, 8).map(function (r) { return '· ' + esc(r.vendor) + ' - ' + esc(r.name.length > 28 ? r.name.slice(0, 28) + '…' : r.name); }).join('<br>');
-    if (rs.length > 8) list += '<br>… 외 ' + (rs.length - 8) + '건';
-    bindTip(row, '<b>' + esc(s.name) + ' · ' + rs.length + '건</b>' + (list ? '<br>' + list : ''));
+    var lines = rs.slice(0, 8).map(function (r) { return esc(r.vendor) + ' · ' + esc(r.name.length > 28 ? r.name.slice(0, 28) + '…' : r.name); });
+    if (rs.length > 8) lines.push('… 외 ' + (rs.length - 8) + '건');
+    bindTip(row, tipHtml(esc(s.name), rs.length + '건', lines));
     stageBars.appendChild(row);
   });
 
@@ -342,16 +557,18 @@
     var ip = rs.length - d - h;
     var unit = 100 / maxProj;
     var segs = '';
-    if (d) segs += '<div class="bseg" style="background:var(--st-5);width:' + d * unit + '%"></div>';
-    if (ip) segs += '<div class="bseg" style="background:var(--pending);width:' + ip * unit + '%"></div>';
+    if (d) segs += '<div class="bseg" style="background:var(--done);width:' + d * unit + '%"></div>';
+    if (ip) segs += '<div class="bseg" style="background:var(--progress);width:' + ip * unit + '%"></div>';
     if (h) segs += '<div class="bseg" style="background:var(--hold);width:' + h * unit + '%"></div>';
-    var row = el('div', 'brow proj');
+    var row = el('div', 'brow');
     row.innerHTML = '<div class="blabel" title="' + esc(p) + '">' + esc(p) + '</div><div class="btrack">' + segs + '</div><div class="bval">' + d + '/' + rs.length + '</div>';
-    bindTip(row, '<b>' + esc(p) + '</b><br>총 ' + rs.length + '건 · 체결 완료 ' + d + ' · 진행 중 ' + ip + (h ? ' · 홀딩 ' + h : ''));
+    var lines = ['체결 완료 ' + d + '건', '진행 중 ' + ip + '건'];
+    if (h) lines.push('홀딩 ' + h + '건');
+    bindTip(row, tipHtml(esc(p), '체결 완료 ' + d + ' / 전체 ' + rs.length + '건', lines));
     projBars.appendChild(row);
   });
   document.getElementById('projLegend').innerHTML =
-    '<span><i style="background:var(--st-5)"></i>체결 완료</span><span><i style="background:var(--pending)"></i>진행 중</span><span><i style="background:var(--hold)"></i>홀딩</span><span style="color:var(--muted)">오른쪽 숫자: 체결 완료 / 전체</span>';
+    '<span><i style="background:var(--done)"></i>체결 완료</span><span><i style="background:var(--progress)"></i>진행 중</span><span><i style="background:var(--hold)"></i>홀딩</span><span class="grow">오른쪽 숫자: 체결 완료 / 전체</span>';
 
   // ---------- 임박 목록 ----------
   function ddayText(n) { return n === 0 ? 'D-DAY' : n > 0 ? 'D-' + n : 'D+' + (-n); }
@@ -360,8 +577,9 @@
     if (!items.length) { box.appendChild(el('div', 'empty', emptyMsg)); return; }
     items.forEach(function (it) {
       var d = el('div', 'item');
-      d.innerHTML = '<div class="dday' + (it.n <= 7 ? ' soon' : '') + '">' + ddayText(it.n) + '</div>' +
-        '<div class="t"><b>' + esc(it.r.vendor) + '</b> · ' + esc(it.r.name) + '<div class="m">' + esc(it.sub) + '</div></div>' +
+      var full = it.r.vendor + ' · ' + it.r.name;
+      d.innerHTML = '<div><span class="dday' + (it.n <= 7 ? ' soon' : '') + '">' + ddayText(it.n) + '</span></div>' +
+        '<div class="t"><div class="name" title="' + esc(full) + '"><b>' + esc(it.r.vendor) + '</b> <span>·</span> ' + esc(it.r.name) + '</div><div class="m">' + esc(it.sub) + '</div></div>' +
         '<div class="d">' + esc(it.date) + '</div>';
       box.appendChild(d);
     });
@@ -395,12 +613,12 @@
     var label = s[1] + ': ' + (v === 'O' ? '완료' : v === 'X' ? '문제 · 확인 필요' : v === '대체' ? '각서 등으로 대체' : '미진행');
     return '<span class="dot ' + cls + '" title="' + esc(label) + '">' + txt + '</span>';
   }
-  function fmtPeriod(r) { return (r.start || r.end) ? esc(r.start || '?') + ' ~ ' + esc(r.end || '?') : '<span style="color:var(--muted)">미정</span>'; }
+  function fmtPeriod(r) { return (r.start || r.end) ? esc(r.start || '?') + '<br>~ ' + esc(r.end || '?') : '<span class="dim">미정</span>'; }
   function fmtDates(r) {
     var out = [];
     if (r.adv_date) out.push('선금 ' + esc(r.adv_date));
     if (r.bal_date) out.push('잔금 ' + esc(r.bal_date));
-    return out.length ? out.join('<br>') : '<span style="color:var(--muted)">-</span>';
+    return out.length ? out.join('<br>') : '<span class="dim">-</span>';
   }
   function render() {
     var q = document.getElementById('q').value.trim().toLowerCase();
@@ -420,9 +638,9 @@
       var dots = '<div class="dots">' + CONTRACT_STEPS.map(function (s) { return dot(r, s); }).join('') + '<span class="gap"></span>' +
         ADV_STEPS.map(function (s) { return dot(r, s); }).join('') + '<span class="gap"></span>' + BAL_STEPS.map(function (s) { return dot(r, s); }).join('') + '</div>';
       var badge = '<span class="badge"><i style="background:' + r.stage.color + '"></i>' + esc(r.stage.name) + '</span>' +
-        (r.issues.length ? '<br><span class="flag">▲ 확인 필요: ' + esc(r.issues.join(', ')) + '</span>' : '');
+        (r.issues.length ? '<span class="flag">확인 필요: ' + esc(r.issues.join(', ')) + '</span>' : '');
       tr.innerHTML = '<td class="proj' + (first ? '' : ' cont') + '">' + (first ? esc(r.project) : '') + '</td>' +
-        '<td class="vendor">' + esc(r.vendor) + '</td><td class="cname">' + esc(r.name) + '</td><td>' + esc(r.pm) + '</td>' +
+        '<td class="vendor">' + esc(r.vendor) + '</td><td class="cname">' + esc(r.name) + '</td><td class="pm">' + esc(r.pm) + '</td>' +
         '<td class="period">' + fmtPeriod(r) + '</td><td>' + dots + '</td><td>' + badge + '</td>' +
         '<td class="dates">' + fmtDates(r) + '</td><td class="note">' + esc(r.note) + '</td>';
       tbody.appendChild(tr);
