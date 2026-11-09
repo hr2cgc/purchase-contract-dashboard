@@ -3,3 +3,9 @@
 *.xls
 .DS_Store
 *.tsv
+watcher/config.json
+watcher/.watcher_state.json
+watcher/*.log*
+dist/
+__pycache__/
+.wrangler/

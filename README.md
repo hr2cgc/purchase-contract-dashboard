@@ -73,3 +73,16 @@
 - `scripts/build_data.py` : 엑셀(.xlsx) 또는 탭 구분 텍스트(.tsv) → `data.js` 변환·검증 스크립트
 - `fonts/` : Pretendard Variable 글꼴 (SIL OFL 1.1 라이선스, 같은 폴더의 라이선스 파일 참고)
 - `vendor/` : 엑셀 불러오기용 SheetJS (Apache-2.0, 라이선스 파일 포함)
+
+## 실시간 자동 반영 (엑셀 저장 → 대시보드, AI 미사용·무료)
+
+```
+직원이 엑셀 저장 → OneDrive 동기화 → [내 PC] watcher.py 가 변경 감지·검증 → Cloudflare KV
+→ Cloudflare Pages Function(/api/data, 로그인 보호) → 대시보드가 30초마다 확인해 변경 시에만 다시 그림
+```
+
+- 계약 데이터는 정적 파일·GitHub 어디에도 없고, 로그인(Cloudflare Access)을 통과해야만 `/api/data` 로 받을 수 있습니다.
+- `scripts/make_dist.py` 로 만든 `dist/` 에는 `data.js` 가 빈 껍데기로만 들어갑니다.
+- 반영 시간: OneDrive 동기화(수 초~수십 초) + 감시 주기 5초 + KV 전파(최대 약 60초) + 화면 확인 30초 → 보통 1~2분.
+- 이 PC 가 꺼져 있거나 OneDrive 동기화가 멈추면 반영이 멈춥니다(화면에는 마지막 정상 데이터 + 안내 표시).
+- 설정 순서는 `watcher/SETUP.md` 참고.

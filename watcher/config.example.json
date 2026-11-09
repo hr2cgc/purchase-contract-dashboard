@@ -1,0 +1,6 @@
+{
+  "xlsx_path": "C:\\Users\\test1\\OneDrive - Dtonic Corp\\BX사업본부 - General\\99. 기타\\사업지원팀\\계약 진행 현황\\매입 계약 진행 현황.xlsx",
+  "cf_account_id": "여기에 Cloudflare 계정 ID",
+  "cf_kv_namespace_id": "여기에 KV 네임스페이스 ID",
+  "cf_api_token": "여기에 API 토큰(KV 편집 권한만)"
+}

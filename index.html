@@ -153,6 +153,10 @@
   h1 { margin: 0; font-size: var(--fs-title); line-height: 1.3; font-weight: 700; letter-spacing: -0.02em; }
   .meta { margin-top: var(--sp-1); color: var(--text-2); font-size: var(--fs-meta); }
   .meta .sep { margin: 0 var(--sp-2); color: var(--border-strong); }
+  .sync::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--text-3, var(--border-strong)); }
+  .sync.ok::before { background: var(--done); }
+  .sync.warn::before { background: var(--danger); }
+  .sync.busy::before { background: var(--progress); }
   .btn {
     height: 32px; padding: 0 var(--sp-3);
     background: var(--surface); color: var(--text-2);
@@ -384,9 +388,10 @@
   <header>
     <div>
       <h1>매입 계약 현황 대시보드</h1>
-      <div class="meta">기준일 <span class="num" id="today"></span><span class="sep">|</span>데이터 반영일 <span class="num" id="updated"></span><span class="sep">|</span>내부 공유용</div>
+      <div class="meta">기준일 <span class="num" id="today"></span><span class="sep">|</span>데이터 반영일 <span class="num" id="updated"></span><span class="sep">|</span>내부 공유용<span id="syncMeta" hidden><span class="sep">|</span><span id="syncState" class="sync"></span></span></div>
     </div>
     <div class="actions">
+      <button class="btn" id="refreshBtn" type="button" hidden>지금 새로고침</button>
       <button class="btn" id="importBtn" type="button">엑셀 불러오기</button>
       <input type="file" id="importFile" accept=".xlsx,.xlsm" hidden>
       <button class="btn" id="themeBtn" type="button">다크 모드</button>
@@ -466,11 +471,13 @@
 </div>
 <div id="tip" role="tooltip"></div>
 
+<script src="config.js" onerror="void 0"></script>
 <script src="data.js"></script>
 <script>
 (function () {
+  var SYNC_URL = window.SYNC_URL || '';           // 설정돼 있으면 서버(/api/data)에서 자동 갱신
   var ORIGINAL = window.CONTRACTS || [];
-  var ORIGINAL_UPDATED = window.DATA_UPDATED || '-';
+  var ORIGINAL_UPDATED = SYNC_URL ? '불러오는 중' : (window.DATA_UPDATED || '-');
   var ROWS = [], total = 0;
 
   // ---------- 기준일 ----------
@@ -604,8 +611,9 @@
   });
 
   // ---------- 화면 전체 구성 (데이터가 바뀌면 이 함수로 다시 그림) ----------
-  function build(rows) {
+  function build(rows, keepFilters) {
     hideTip();
+    var keep = keepFilters ? { q: fq.value, pm: fpm.value, st: fstatus.value, issue: fissue.checked } : null;
     ROWS = rows.map(function (r, i) { var c = {}; for (var k in r) c[k] = r[k]; c.id = i; return c; });
     ROWS.forEach(classify);
     total = ROWS.length;
@@ -693,6 +701,10 @@
     fpm.innerHTML = '<option value="">담당 PM 전체</option>' + pms.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('');
     fstatus.innerHTML = '<option value="">현재 상태 전체</option>' + STAGES.concat([HOLD]).map(function (s) { return '<option value="' + s.key + '">' + esc(s.name) + '</option>'; }).join('');
     fq.value = ''; fpm.value = ''; fstatus.value = ''; fissue.checked = false;
+    if (keep) {                       // 자동 갱신 때는 보던 필터를 유지
+      fq.value = keep.q; fstatus.value = keep.st; fissue.checked = keep.issue;
+      if (pms.indexOf(keep.pm) >= 0) fpm.value = keep.pm;
+    }
     render();
   }
 
@@ -785,6 +797,7 @@
     });
   }
 
+  var tempView = false;                       // 수동 업로드 임시 보기 중이면 자동 갱신이 화면을 덮어쓰지 않음
   var notice = document.getElementById('notice');
   function showNotice(kind, html, actionLabel, onAction) {
     notice.className = 'notice' + (kind === 'error' ? ' error' : '');
@@ -802,6 +815,7 @@
   }
   function hideError() { noticeErr.hidden = true; noticeErr.innerHTML = ''; }
   function restoreOriginal() {
+    tempView = false;
     build(ORIGINAL);
     updatedEl.textContent = ORIGINAL_UPDATED;
     hideNotice(); hideError();
@@ -827,6 +841,7 @@
       if (!ws) throw new Error('시트를 찾을 수 없습니다.');
       var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: true });
       var res = convertRows(rows);
+      tempView = true;
       build(res.recs);
       updatedEl.textContent = '임시 보기 (' + file.name + ')';
       var warnHtml = '';
@@ -844,6 +859,93 @@
       importBtn.disabled = false; importBtn.textContent = '엑셀 불러오기';
     });
   });
+
+
+  // =====================================================================
+  // 자동 동기화 (Cloudflare 배포본에서만 동작: config.js 에 SYNC_URL 이 있을 때)
+  //  - 30초마다 /api/data 를 확인하고, 해시가 바뀐 경우에만 화면을 다시 그립니다. (AI 호출 없음)
+  //  - 실패하면 마지막 정상 데이터를 그대로 보여 주고 오류만 안내합니다.
+  //  - 수동 엑셀 불러오기는 이와 별개로 동작합니다(임시 보기 중에는 화면을 덮어쓰지 않음).
+  // =====================================================================
+  var syncMeta = document.getElementById('syncMeta');
+  var syncState = document.getElementById('syncState');
+  var refreshBtn = document.getElementById('refreshBtn');
+  var live = { hash: '', okAt: 0, sourceAt: '', err: '', hb: null, busy: false, loaded: false, hbKey: '', errShown: false };
+
+  function fmtClock(t) { var d = new Date(t); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()); }
+  function ago(t) {
+    var s = Math.max(0, Math.round((Date.now() - t) / 1000));
+    return s < 60 ? s + '초 전' : s < 3600 ? Math.floor(s / 60) + '분 전' : Math.floor(s / 3600) + '시간 전';
+  }
+  function isWorkHours() {
+    var k = new Date(Date.now() + (new Date().getTimezoneOffset() + 540) * 60000);   // KST
+    return k.getDay() >= 1 && k.getDay() <= 5 && k.getHours() >= 8 && k.getHours() < 20;
+  }
+  function paintSync() {
+    if (!SYNC_URL) return;
+    var cls = 'sync', txt;
+    if (live.busy) { cls += ' busy'; txt = '확인 중…'; }
+    else if (live.err) { cls += ' warn'; txt = '동기화 실패 · 마지막 정상 ' + (live.okAt ? fmtClock(live.okAt) : '없음'); }
+    else if (live.okAt) { cls += ' ok'; txt = '마지막 동기화 ' + fmtClock(live.okAt); }
+    else { txt = '동기화 대기'; }
+    syncState.className = cls; syncState.textContent = txt;
+    // 감시 프로그램(원본 PC) 상태: 근무시간에 30분 넘게 신호가 없으면 안내
+    var hb = live.hb, stale = hb && hb.at && (Date.now() - Date.parse(hb.at) > 30 * 60000);
+    var msgs = [];
+    if (live.loaded && !hb) msgs.push('원본 감시 프로그램이 아직 한 번도 연결되지 않았습니다.');
+    else if (stale && isWorkHours()) msgs.push('원본 엑셀 감시 신호가 ' + ago(Date.parse(hb.at)) + '에 마지막으로 확인됐습니다. 최신 반영이 늦어질 수 있습니다.');
+    if (hb && hb.ok === false && hb.error) msgs.push('원본 엑셀 읽기 오류: ' + hb.error);
+    var key = msgs.join('|');
+    if (!msgs.length && live.hbKey) { live.hbKey = ''; if (!tempView) hideNotice(); }
+    else if (msgs.length && !tempView && key !== live.hbKey) {
+      live.hbKey = key;
+      showNotice('error', '<b>데이터 확인 필요</b><div class="sub">' + msgs.map(esc).join('<br>') + ' 화면에는 마지막 정상 데이터가 표시됩니다.</div>', '닫기', hideNotice);
+    }
+  }
+  function applyLive(res) {
+    var d = res.data;
+    live.hb = res.heartbeat || null;
+    if (!d || !Array.isArray(d.rows)) { live.loaded = true; return false; }
+    live.loaded = true;
+    live.sourceAt = d.sourceModified || '';
+    if (d.hash === live.hash) return false;               // 변경 없음: 다시 그리지 않음
+    live.hash = d.hash;
+    ORIGINAL = d.rows;
+    ORIGINAL_UPDATED = (d.sourceModified || d.syncedAt || '').slice(0, 16).replace('T', ' ') || '-';
+    if (!tempView) { build(ORIGINAL, true); updatedEl.textContent = ORIGINAL_UPDATED; }
+    return true;
+  }
+  function syncNow(manual) {
+    if (!SYNC_URL || live.busy) return Promise.resolve();
+    live.busy = true; if (manual) { refreshBtn.disabled = true; } paintSync();
+    var ctl = window.AbortController ? new AbortController() : null;
+    var to = setTimeout(function () { if (ctl) ctl.abort(); }, 15000);
+    return fetch(SYNC_URL, { cache: 'no-store', credentials: 'same-origin', signal: ctl ? ctl.signal : undefined })
+      .then(function (r) {
+        var ct = r.headers.get('content-type') || '';
+        if (r.status === 401 || r.status === 403 || r.redirected || ct.indexOf('json') < 0) throw new Error('로그인이 만료됐을 수 있습니다. 페이지를 새로고침해 주세요.');
+        if (!r.ok) throw new Error('서버 응답 오류 (' + r.status + ')');
+        return r.json();
+      })
+      .then(function (res) { if (res.error) throw new Error(res.error); applyLive(res); live.err = ''; live.okAt = Date.now(); })
+      .catch(function (e) { live.err = (e && e.name === 'AbortError') ? '응답 시간 초과' : (e && e.name === 'TypeError') ? '서버에 연결할 수 없습니다(네트워크 확인).' : (e && e.message) || '알 수 없는 오류'; })
+      .then(function () {
+        clearTimeout(to); live.busy = false; refreshBtn.disabled = false; paintSync();
+        if (live.err && !tempView) {
+          live.errShown = true;
+          showError('<b>자동 갱신 실패</b><div class="sub">' + esc(live.err) + ' 마지막 정상 데이터를 계속 표시합니다. 자동으로 다시 시도합니다.</div>');
+        } else if (!live.err && live.errShown) { live.errShown = false; hideError(); }
+      });
+  }
+  if (SYNC_URL) {
+    syncMeta.hidden = false; refreshBtn.hidden = false;
+    refreshBtn.addEventListener('click', function () { syncNow(true); });
+    var every = window.SYNC_INTERVAL_MS || 30000;
+    setInterval(function () { if (!document.hidden) syncNow(false); else paintSync(); }, every);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) syncNow(false); });
+    setInterval(paintSync, 15000);
+    syncNow(false);
+  }
 
   // ---------- 테마 ----------
   var btn = document.getElementById('themeBtn');
