@@ -2,3 +2,4 @@
 *.xlsx
 *.xls
 .DS_Store
+*.tsv
