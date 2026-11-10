@@ -315,6 +315,8 @@
   .ch-name span { color: var(--text-2); }
   .ch-sub { display: flex; flex-wrap: wrap; gap: 2px var(--sp-4); margin-top: var(--sp-1); color: var(--text); font-size: var(--fs-sub); line-height: 1.5; font-variant-numeric: tabular-nums; }
   .ch-sub .k { margin-right: 6px; color: var(--text-2); }
+  .ch-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: var(--sp-1); color: var(--text-2); font-size: var(--fs-meta); line-height: 1.5; overflow-wrap: anywhere; }
+  .ch-note .k { margin-right: 6px; font-weight: 500; }
   .ch-flag { margin-top: var(--sp-1); color: var(--danger); font-size: var(--fs-meta); font-weight: 500; }
   .pc-list { margin-top: var(--sp-1); }
   .pc-more {
@@ -619,6 +621,7 @@
   var EXT = { key: 7, name: '매입 외 (매입계약 아님 · 파트너십 변경 등)', color: 'var(--text-3)' };          // 매입계약이 아닌 건: 집계에서 제외
   var ALL_STAGES = STAGES.concat([HOLD, SEP, EXT]);
   // 비고에 이 표현이 있으면 매입계약이 아닌 건으로 분류합니다 (필요하면 여기에 단어를 추가)
+  var NOTE_ISSUE_RE = /거부|반려/;
   var EXT_RE = /파트너십|실제 수행하는 계약 아님|매입\s*(계약\s*)?아님/;
   function isDone(v) { return v === 'O' || v === '대체'; }
   function isNA(r, key) { return !!(r.naSet && r.naSet[key]) && !r[key]; }   // 엑셀에서 회색으로 칠한 빈 칸 = 해당 없음 / 이슈로 안 함
@@ -635,6 +638,9 @@
     r.stageKey = r.hold ? 0 : r.ext ? 7 : r.sep ? 6 : (last <= 0 ? 1 : last + 1);
     var issues = [];
     CONTRACT_STEPS.concat(ADV_STEPS, BAL_STEPS).forEach(function (s) { if (r[s[0]] === 'X') issues.push(s[1]); });
+    // 엑셀에 X 표시는 없지만 비고에 '거부·반려'가 적혀 있으면 확인 필요로 봅니다 (예: 변경합의서를 업체가 거부)
+    r.noteBlocked = false;
+    if (!issues.length && !r.ext && !r.hold && NOTE_ISSUE_RE.test(r.note || '')) { issues.push('비고에 거부·반려 언급'); r.noteBlocked = true; }
     r.issues = issues;
     r.stage = r.hold ? HOLD : r.ext ? EXT : r.sep ? SEP : STAGES[r.stageKey - 1];
   }
@@ -682,7 +688,7 @@
     function add(kind, rank, task, r, date, why, n) { items.push({ kind: kind, rank: rank, task: task, r: r, date: date || '', why: why || '', n: n }); }
     ROWS.forEach(function (r) {
       if (r.ext) return;
-      if (r.issues.length) add('issue', 0, '확인 필요', r, '', r.issues.join(', ') + ' 항목에 문제 표시');
+      if (r.issues.length) add('issue', 0, '확인 필요', r, '', r.noteBlocked ? '비고: ' + r.note : r.issues.join(', ') + ' 항목에 문제 표시');
       if (r.hold) { add('hold', 70, '홀딩 상태 확인', r, '', r.note ? '비고: ' + r.note : '홀딩 사유 정보 없음'); return; }
       var e = parse(r.end); if (e) { var ne = diffDays(e); if (ne >= 0 && ne <= 30) add('due', 10, '계약 종료일 임박', r, r.end, r.stage.name, ne); }
       [['adv_date', '선금'], ['bal_date', '잔금']].forEach(function (p) {
@@ -692,9 +698,10 @@
         else if (n < 0) add('paycheck', 60, '지급 여부 확인 필요', r, r[p[0]], p[1] + ' 집행(예정)일 경과 · 실제 지급 확인 정보 없음', n);
       });
       var nextTask = { 1: '법무검토 · 품의 진행', 2: '계약서 송부 필요', 3: '계약서 회수 확인', 4: '계약보증증권 확인' }[r.stageKey];
-      if (nextTask) {
-        var sd = parse(r.start), sn = sd ? diffDays(sd) : null;
-        add('sign', 20 + r.stageKey, nextTask, r, r.start, r.stage.name + (sn !== null && sn < 0 ? ' · 계약 시작일 경과' : ''), sn);
+      if (nextTask && !r.noteBlocked) {
+        var amend = /^\(변경\)/.test(r.name);                  // 변경계약의 시작일은 원계약 시작일이라 업무 기한으로 쓰지 않음
+        var sd = amend ? null : parse(r.start), sn = sd ? diffDays(sd) : null;
+        add('sign', 20 + r.stageKey, nextTask, r, amend ? '' : r.start, (r.stageKey === 1 && isNA(r, 'legal') ? '품의 전 (법무검토 해당 없음)' : r.stage.name) + (sn !== null && sn < 0 ? ' · 계약 시작일 경과' : ''), sn);
       }
       var miss = []; if (!r.start && !isNA(r, 'start')) miss.push('계약 시작일'); if (!r.end && !isNA(r, 'end')) miss.push('계약 종료일');
       if (miss.length) add('missing', 80, '계약 기간 정보 없음', r, '', miss.join(', ') + ' 비어 있음');
@@ -787,15 +794,27 @@
   //    지급은 '자금집행 품의'까지만, 최종 완료는 '정보 미확인'으로 표시합니다. (추정하지 않음)
   var openProj = {};                         // 펼친 사업 (자동 갱신 후에도 유지)
   var PREVIEW = 3;                           // 접힌 상태에서 보여 줄 매입계약 수
+  var SHORT = { adv_bond: '보증증권', adv_tax: '세금계산서', adv_appr: '집행 품의', bal_tax: '세금계산서', bal_appr: '집행 품의' };
   function phase(r, steps) {                 // 선금/잔금 단계 요약 (품의 기준). 회색(해당 없음) 단계는 제외하고 계산
     var app = steps.filter(function (s) { return !isNA(r, s[0]); });
     if (!app.length) return '해당 없음';
     var done = 0, bad = 0;
     app.forEach(function (s) { if (isDone(r[s[0]])) done++; if (r[s[0]] === 'X') bad++; });
     if (bad) return '확인 필요';
-    if (done === app.length) return app.some(function (s) { return /appr$/.test(s[0]); }) ? '집행 품의 완료' : '해당 단계 완료';
+    if (done === app.length) {
+      if (app.length === steps.length) return app.some(function (s) { return /appr$/.test(s[0]); }) ? '집행 품의 완료' : '완료';
+      return app.map(function (s) { return SHORT[s[0]]; }).join('·') + ' 완료 · 나머지 해당 없음';     // 일부 단계만 해당되는 경우
+    }
     if (done > 0) return '진행 중 ' + done + '/' + app.length;
     return '미진행';
+  }
+  // 지급 상태: 세금계산서·집행 품의 단계(해당되는 것만) 기준. 보증증권은 지급 단계가 아님.
+  //  'na'   : 해당 단계가 모두 회색  / 'note': 회색이지만 비고에 지급·대금 언급(분할 지급 등) / 'done': 품의까지 완료(실제 지급은 확인 불가) / 'wip': 남아 있음
+  var PAY_NOTE_RE = /지급|대금|정산|잔금/;
+  function payState(r) {
+    var steps = ADV_STEPS.concat(BAL_STEPS).filter(function (s) { return /tax$|appr$/.test(s[0]) && !isNA(r, s[0]); });
+    if (!steps.length) return PAY_NOTE_RE.test(r.note || '') ? 'note' : 'na';
+    return steps.every(function (s) { return isDone(r[s[0]]); }) ? 'done' : 'wip';
   }
   function balState(r) {                     // 'na'(해당 없음) / 'done'(잔금 집행 품의까지 완료) / 'wip'
     var app = BAL_STEPS.filter(function (s) { return !isNA(r, s[0]); });
@@ -804,20 +823,22 @@
     return ok ? 'done' : 'wip';
   }
   function balDone(r) { return balState(r) === 'done'; }
-  function advNA(r) { return ADV_STEPS.every(function (s) { return isNA(r, s[0]); }); }
   function childBadge(r) {
     if (r.ext) return ['hold', '매입 외'];
     if (r.hold) return ['hold', '홀딩'];
     if (r.sep) return ['prog', '별도 절차 진행'];
     if (r.stageKey < 5) return ['prog', '계약 체결 진행 중'];
-    if (balDone(r)) return ['signed', '체결 · 잔금 집행 품의 완료'];
-    return balState(r) === 'na' && advNA(r) ? ['signed', '계약 체결 완료'] : ['signed', '계약 체결 완료 · 지급 진행'];
+    var ps = payState(r);
+    if (ps === 'done') return ['signed', '체결 · 집행 품의 완료'];
+    if (ps === 'na') return ['signed', '계약 체결 완료'];
+    if (ps === 'note') return ['signed', '체결 완료 · 지급 조건 비고 참조'];
+    return ['signed', '계약 체결 완료 · 지급 진행'];
   }
   function childRank(r) {                    // 먼저 확인할 것부터
     if (r.ext) return 50;
     if (r.issues.length) return 0;
     if (!r.hold && r.stageKey < 5) return 10 + (r.sep ? 5 : r.stageKey);
-    if (!r.hold && balState(r) === 'wip') return 20;
+    if (!r.hold && (payState(r) === 'wip' || payState(r) === 'note')) return 20;
     if (r.hold) return 30;
     return 40;
   }
@@ -828,9 +849,10 @@
     if (r.bal_date) dates += '<span><span class="k">잔금 집행(예정)일</span>' + esc(r.bal_date) + '</span>';
     return '<div class="ch"><div class="ch-top"><div class="ch-name"><b>' + esc(r.vendor) + '</b> <span>·</span> <span>' + esc(r.name) + '</span></div>' +
       '<span class="sbadge ' + b[0] + '">' + b[1] + '</span></div>' +
-      '<div class="ch-sub"><span><span class="k">계약</span>' + esc(r.stage.name) + '</span>' +
+      '<div class="ch-sub"><span><span class="k">계약</span>' + (r.stageKey === 1 && isNA(r, 'legal') ? '품의 전 (법무검토 해당 없음)' : esc(r.stage.name)) + '</span>' +
       '<span><span class="k">선금</span>' + phase(r, ADV_STEPS) + '</span><span><span class="k">잔금</span>' + phase(r, BAL_STEPS) + '</span>' + dates + '</div>' +
-      (r.issues.length ? '<div class="ch-flag">확인 필요: ' + esc(r.issues.join(', ')) + '</div>' : '') + '</div>';
+      (r.issues.length ? '<div class="ch-flag">확인 필요: ' + esc(r.issues.join(', ')) + '</div>' : '') +
+      (r.note ? '<div class="ch-note" title="' + esc(r.note) + '"><span class="k">비고</span>' + esc(r.note) + '</div>' : '') + '</div>';
   }
   function projectCard(name, rs) {
     var all = rs, extN = rs.filter(function (r) { return r.ext; }).length;
@@ -842,7 +864,7 @@
     var iss = rs.filter(function (r) { return r.issues.length; }).length;
     var sepN = rs.filter(function (r) { return r.sep; }).length;
     var signing = rs.filter(function (r) { return !r.hold && !r.sep && r.stageKey < 5; }).length;
-    var payPending = rs.filter(function (r) { return !r.hold && r.stageKey === 5 && balState(r) === 'wip'; }).length;
+    var payPending = rs.filter(function (r) { return !r.hold && r.stageKey === 5 && (payState(r) === 'wip' || payState(r) === 'note'); }).length;
 
     var starts = rs.map(function (r) { return r.start; }).filter(Boolean).sort();
     var ends = rs.map(function (r) { return r.end; }).filter(Boolean).sort();
@@ -864,7 +886,7 @@
     var rest = [];
     if (signing) rest.push('계약 체결 진행 ' + signing + '건');
     if (sepN) rest.push('별도 절차 진행 ' + sepN + '건');
-    if (payPending) rest.push('잔금 집행 품의 전 ' + payPending + '건');
+    if (payPending) rest.push('지급 단계 진행 ' + payPending + '건');
     if (h) rest.push('홀딩 ' + h + '건');
 
     // 임박 일정: 종료일 30일 이내 / 집행(예정)일 14일 이내 중 가장 가까운 것 (홀딩 제외)
@@ -914,17 +936,18 @@
     var inprog = ptotal - done - holds;
     var issueRows = P.filter(function (r) { return r.issues.length; });
     var pct = ptotal ? Math.round(done / ptotal * 100) : 0;
-    var signing = P.filter(function (r) { return !r.hold && r.stageKey < 5; }).length;                       // 계약 체결 진행 (별도 절차 포함)
-    var payRows = P.filter(function (r) { return !r.hold && r.stageKey === 5 && balState(r) !== 'na'; });      // 체결 후 지급·정산이 남은(또는 확인 불가한) 건
-    var payBefore = payRows.filter(function (r) { return balState(r) === 'wip'; }).length;
+    var signing = P.filter(function (r) { return !r.hold && r.stageKey !== 5; }).length;                      // 계약 체결 진행: 홀딩·매입 외·체결 완료를 뺀 나머지 (별도 절차 포함)
+    var payRows = P.filter(function (r) { return !r.hold && r.stageKey === 5 && payState(r) !== 'na'; });      // 체결 후 지급·정산이 남은(또는 확인 불가한) 건
+    var payBefore = payRows.filter(function (r) { return payState(r) === 'wip'; }).length;
+    var payNote = payRows.filter(function (r) { return payState(r) === 'note'; }).length;
     kpis.innerHTML = '';
     [
       { l: '관리 대상 매입계약', v: ptotal, u: '건', n: '홀딩 ' + holds + '건 포함' + (extCnt ? ' · 매입 외 ' + extCnt + '건 제외' : '') },
       { l: '계약 체결 진행', v: signing, u: '건', n: '송부·회수·보증증권 등 진행 중' },
       { l: '계약 체결 완료', v: done, u: '건', n: '관리 대상의 ' + pct + '% · 최종 완료 아님' },
-      { l: '지급·정산 진행', v: payRows.length, u: '건', n: '잔금 집행 품의 전 ' + payBefore + '건' + (payRows.length > payBefore ? ' · 품의 완료 ' + (payRows.length - payBefore) + '건은 지급 확인 불가' : '') },
+      { l: '지급·정산 진행', v: payRows.length, u: '건', n: '품의 단계 남음 ' + payBefore + '건' + (payNote ? ' · 비고상 분할 지급 ' + payNote + '건' : '') + (payRows.length - payBefore - payNote ? ' · 품의 완료(지급 확인 불가) ' + (payRows.length - payBefore - payNote) + '건' : '') },
       { l: '최종 완료', v: '정보 미확인', unk: true, n: '정산·종료 정보가 엑셀에 없음' },
-      { l: '확인 필요', v: issueRows.length, u: '건', n: 'X 표시(문제·거부) 포함', alert: issueRows.length > 0 }
+      { l: '확인 필요', v: issueRows.length, u: '건', n: 'X 표시 ' + issueRows.filter(function (r) { return !r.noteBlocked; }).length + '건' + (issueRows.some(function (r) { return r.noteBlocked; }) ? ' · 비고 거부 ' + issueRows.filter(function (r) { return r.noteBlocked; }).length + '건' : ''), alert: issueRows.length > 0 }
     ].forEach(function (k) {
       var d = el('div', 'card kpi' + (k.alert ? ' alert' : '') + (k.unk ? ' unk' : ''));
       d.innerHTML = '<div class="label">' + k.l + '</div><div class="value">' + k.v + (k.u ? '<small>' + k.u + '</small>' : '') + '</div>' +
@@ -952,7 +975,7 @@
     projCards.innerHTML = '';
     var projects = [], pmap = {};
     ROWS.forEach(function (r) { if (!pmap[r.project]) { pmap[r.project] = []; projects.push(r.project); } pmap[r.project].push(r); });
-    function openCount(p) { return pmap[p].filter(function (r) { return !r.ext && !(r.stageKey === 5 && balState(r) !== 'wip'); }).length; }
+    function openCount(p) { return pmap[p].filter(function (r) { return !r.ext && !(r.stageKey === 5 && payState(r) !== 'wip' && payState(r) !== 'note'); }).length; }
     function issueCount(p) { return pmap[p].filter(function (r) { return !r.ext && r.issues.length; }).length; }
     projects.sort(function (a, b) { return issueCount(b) - issueCount(a) || openCount(b) - openCount(a) || pmap[b].length - pmap[a].length; });
     if (!projects.length) projCards.appendChild(el('div', 'empty', '표시할 사업이 없습니다.'));
