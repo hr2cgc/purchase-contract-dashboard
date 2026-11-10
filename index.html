@@ -412,7 +412,9 @@
   .sb.warn { background: var(--warn-soft, var(--b-hold-bg)); color: var(--warn); }
   /* ===== 사업별 계약 목록 (한 열, 열 정렬) ===== */
   .plist { background: transparent; }
-  .pg { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden; margin-top: var(--sp-4); }
+  .pg { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden; margin-top: 40px; }
+  .pg:first-child { margin-top: var(--sp-2); }
+  @media (max-width: 820px) { .pg { margin-top: 32px; } }
   .lhead, .crow { display: grid; grid-template-columns: minmax(0, 1.4fr) 196px minmax(0, 1.1fr); column-gap: var(--sp-4); align-items: center; padding-left: var(--sp-5); padding-right: var(--sp-5); }
   .lhead { height: 28px; padding-left: calc(var(--sp-5) + 1px); padding-right: calc(var(--sp-5) + 1px); font-size: var(--fs-meta); font-weight: 600; color: var(--text-2); }
   .pg-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); padding: var(--sp-3) var(--sp-5); background: color-mix(in srgb, var(--text) 8%, var(--surface)); border-bottom: 1px solid var(--border-strong); }
