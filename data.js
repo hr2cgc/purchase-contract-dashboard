@@ -1,5 +1,5 @@
 // scripts/build_data.py 로 자동 생성된 파일입니다. 직접 수정하지 마세요.
-window.DATA_UPDATED = "2026-11-09";
+window.DATA_UPDATED = "2026-11-11";
 window.CONTRACTS = [
  {
   "project": "데이터허브 시범솔루션 발굴사업(경남AI관광서비스 플랫폼 구축)",
@@ -10,7 +10,7 @@ window.CONTRACTS = [
   "end": "2027-06-30",
   "legal": "O",
   "approval": "O",
-  "send": "",
+  "send": "O",
   "receive": "",
   "bond": "",
   "adv_bond": "",
@@ -20,7 +20,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "11/10 계약서 등기 발송 예정 (사용인감 반출로 인한 지연)"
+  "note": "",
+  "na": []
  },
  {
   "project": "데이터허브 시범솔루션 발굴사업(경남AI관광서비스 플랫폼 구축)",
@@ -41,7 +42,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "",
+  "na": []
  },
  {
   "project": "도서형 기후·해양 재난 AX 실증사업(NIA)_제주",
@@ -62,7 +64,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "나라장터로 계약 진행 예정"
+  "note": "변경 계약 품의 진행중(나라장터로 계약 진행 예정)",
+  "na": []
  },
  {
   "project": "도서형 기후·해양 재난 AX 실증사업(NIA)_제주",
@@ -83,7 +86,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "변경 계약 품의 진행중",
+  "na": []
  },
  {
   "project": "도서형 기후·해양 재난 AX 실증사업(NIA)_제주",
@@ -104,7 +108,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "변경 계약 품의 진행중",
+  "na": []
  },
  {
   "project": "수원시 포트홀 탐지 데이터플랫폼 인프라 구축",
@@ -125,7 +130,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "실제 수행하는 계약 아님"
+  "note": "실제 수행하는 계약 아님",
+  "na": []
  },
  {
   "project": "평택시 탄소중립 도시통합 데이터허브 구축사업",
@@ -146,7 +152,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "",
+  "na": []
  },
  {
   "project": "평택시 탄소중립 도시통합 데이터허브 구축사업",
@@ -167,7 +174,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "업체에 견적서 요청 → 계약서 수정하여 법무검토 요청 예정"
+  "note": "업체에 견적서 요청 → 계약서 수정하여 법무검토 요청 예정",
+  "na": []
  },
  {
   "project": "평택시 탄소중립 도시통합 데이터허브 구축사업",
@@ -188,7 +196,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "홀딩"
+  "note": "홀딩",
+  "na": []
  },
  {
   "project": "25년 제주스마트도시 데이터허브 시범솔루션 발굴사업",
@@ -209,7 +218,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "파트너십 계약 변경"
+  "note": "파트너십 계약 변경",
+  "na": []
  },
  {
   "project": "25년 제주스마트도시 데이터허브 시범솔루션 발굴사업",
@@ -230,7 +240,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "",
+  "na": []
  },
  {
   "project": "25년 제주스마트도시 데이터허브 시범솔루션 발굴사업",
@@ -251,7 +262,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "",
+  "na": []
  },
  {
   "project": "25년 제주스마트도시 데이터허브 시범솔루션 발굴사업",
@@ -272,7 +284,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "",
+  "na": []
  },
  {
   "project": "25년 제주스마트도시 데이터허브 시범솔루션 발굴사업",
@@ -293,7 +306,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "잔금(100%)로 변경 희망, 납품내역서 제출 희망"
+  "note": "잔금(100%)로 변경 희망, 납품내역서 제출 희망",
+  "na": []
  },
  {
   "project": "스마트도시 데이터허브 시범솔루션 발굴사업(충청북도)",
@@ -314,7 +328,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "",
+  "na": []
  },
  {
   "project": "스마트도시 데이터허브 시범솔루션 발굴사업(충청북도)",
@@ -335,7 +350,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "",
+  "na": []
  },
  {
   "project": "스마트도시 데이터허브 시범솔루션 발굴사업(충청북도)",
@@ -356,7 +372,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "홀딩"
+  "note": "홀딩",
+  "na": []
  },
  {
   "project": "2026년 스마트도시 데이터허브 유지관리 용역_제주특별자치도",
@@ -377,7 +394,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "선금보증증권 발급 거부, 프로젝트와 별개로 관리함"
+  "note": "선금보증증권 발급 거부, 프로젝트와 별개로 관리함",
+  "na": []
  },
  {
   "project": "스마트시티 데이터허브 외 유지보수_경상남도",
@@ -398,7 +416,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "발주처 대금 수금 일정에 따라 지급(1~4차: 각 1,694,000원, 5차: 5,104,000원)"
+  "note": "발주처 대금 수금 일정에 따라 지급(1~4차: 각 1,694,000원, 5차: 5,104,000원)",
+  "na": []
  },
  {
   "project": "아산시 강소형 스마트시티 조성사업 서비스 인프라 구축 용역",
@@ -419,7 +438,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "",
+  "na": []
  },
  {
   "project": "아산시 강소형 스마트시티 조성사업 서비스 인프라 구축 용역",
@@ -440,7 +460,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "원 매출계약의 계약기간 및 지급조건 변경에 따라 변경합의서 전달하였으나, 업체 측에서 거부"
+  "note": "원 매출계약의 계약기간 및 지급조건 변경에 따라 변경합의서 전달하였으나, 업체 측에서 거부",
+  "na": []
  },
  {
   "project": "아산시 강소형 스마트시티 조성사업 서비스 인프라 구축 용역",
@@ -455,13 +476,14 @@ window.CONTRACTS = [
   "receive": "",
   "bond": "",
   "adv_bond": "",
-  "adv_tax": "",
+  "adv_tax": "O",
   "adv_appr": "",
-  "adv_date": "",
+  "adv_date": "2026-11-30",
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "계약서 초안 전달"
+  "note": "변경 계약 품의 예정",
+  "na": []
  },
  {
   "project": "아산시 강소형 스마트시티 조성사업 서비스 인프라 구축 용역",
@@ -482,7 +504,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "등기 발송 예정"
+  "note": "등기 발송 완료",
+  "na": []
  },
  {
   "project": "AI 기반 도로 포트홀 검출 및 알림 서비스 구축사업",
@@ -503,7 +526,8 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": ""
+  "note": "",
+  "na": []
  },
  {
   "project": "한국전력공사 154kV 방여울SS 전력통신설비 시설공사",
@@ -524,6 +548,7 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "보증증권 요청"
+  "note": "보증증권 요청",
+  "na": []
  }
 ];
