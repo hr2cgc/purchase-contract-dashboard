@@ -64,6 +64,7 @@
     --hold: #A3AAB5;         /* 홀딩: 중립 그레이 */
     --danger: #B91C1C;       /* 확인 필요 · 위험 */
     --danger-soft: #FEF2F2;
+    --warn: #B45309;         /* 정보 미확인 · 확인 필요(데이터 부족) */
 
     /* 사업 카드 상태 배지: 연한 배경 + 진한 글자 */
     --b-done-bg: #E3E9F8;  --b-done-fg: #1E3A8A;
@@ -101,6 +102,7 @@
       --hold: #5A6372;
       --danger: #F87171;
       --danger-soft: #2A1517;
+      --warn: #FBBF24;
       --text-3: #6B7686;
       --b-done-bg: #1B2B4F; --b-done-fg: #A9C4FF;
       --b-prog-bg: #16233D; --b-prog-fg: #8FB4FF;
@@ -131,6 +133,7 @@
     --hold: #5A6372;
     --danger: #F87171;
     --danger-soft: #2A1517;
+    --warn: #FBBF24;
     --text-3: #6B7686;
     --b-done-bg: #1B2B4F; --b-done-fg: #A9C4FF;
     --b-prog-bg: #16233D; --b-prog-fg: #8FB4FF;
@@ -253,41 +256,71 @@
   .bseg:last-child  { border-top-right-radius: 3px; border-bottom-right-radius: 3px; }
   .bval { text-align: right; font-size: var(--fs-body); font-weight: 600; font-variant-numeric: tabular-nums; }
 
-  /* ===================== 사업별 계약 현황 (카드) ===================== */
+  /* ===================== 사업별 계약 현황 (상위: 사업 / 하위: 매입계약) ===================== */
   .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-4); }
   .sec-head h2 { margin: 0; font-size: var(--fs-section); line-height: 1.4; font-weight: 600; letter-spacing: -0.01em; }
   .sec-head .hint { color: var(--text-2); font-size: var(--fs-sub); }
-  .pgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
-  .pcard {
-    display: flex; flex-direction: column; gap: var(--sp-3);
-    padding: var(--sp-5); transition: border-color .12s;
-  }
-  .pcard:hover { border-color: var(--border-strong); }
-  .pc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
+  .gaps { margin-bottom: var(--sp-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-size: var(--fs-sub); }
+  .gaps summary { cursor: pointer; padding: var(--sp-3) var(--sp-4); color: var(--text-2); list-style: none; }
+  .gaps summary::-webkit-details-marker { display: none; }
+  .gaps summary::before { content: "+"; display: inline-block; width: 16px; color: var(--text-2); font-weight: 600; }
+  .gaps[open] summary::before { content: "−"; }
+  .gaps summary b { color: var(--warn); font-weight: 600; }
+  .gaps summary:hover { color: var(--text); }
+  .gaps-body { padding: 0 var(--sp-4) var(--sp-4); border-top: 1px solid var(--border); }
+  .gaps-body p { margin: var(--sp-3) 0 var(--sp-2); color: var(--text-2); }
+  .gaps-body dl { margin: 0; display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: var(--sp-2) var(--sp-4); }
+  .gaps-body dt { font-weight: 600; }
+  .gaps-body dd { margin: 0; color: var(--text-2); }
+
+  .pgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); align-items: start; }
+  .pcard { padding: var(--sp-5) var(--sp-6); }
+  .pc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
   .pc-title {
-    flex: 1; min-width: 0; margin: 0; min-height: 2.8em;         /* 제목 2줄 높이를 항상 확보해 카드 간 정렬 통일 */
-    font-size: 15.5px; line-height: 1.4; font-weight: 600; letter-spacing: -0.01em;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+    flex: 1; min-width: 0; margin: 0;
+    font-size: 16px; line-height: 1.4; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere;
   }
+  .pc-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); flex: none; }
+  .pc-meta { margin-top: var(--sp-1); color: var(--text-2); font-size: var(--fs-sub); line-height: 1.5; overflow-wrap: anywhere; }
+  .pc-meta .sep { margin: 0 var(--sp-2); color: var(--border-strong); }
+
+  .pc-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: var(--sp-4); padding: var(--sp-3) 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .st { padding: 0 var(--sp-3); }
+  .st:first-child { padding-left: 0; }
+  .st + .st { border-left: 1px solid var(--border); }
+  .st .n { font-size: 20px; line-height: 1.3; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .st .n small { margin-left: 2px; font-size: var(--fs-sub); font-weight: 500; color: var(--text-2); letter-spacing: 0; }
+  .st .l { margin-top: 2px; color: var(--text-2); font-size: var(--fs-meta); line-height: 1.4; }
+  .st.unk .n { color: var(--warn); font-size: 14px; line-height: 28px; font-weight: 600; letter-spacing: 0; }
+
+  .ch { padding: var(--sp-3) 0; border-top: 1px solid var(--border); }
+  .ch:first-child { border-top: 0; }
+  .ch-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
+  .ch-name { min-width: 0; font-size: var(--fs-body); line-height: 1.45; overflow-wrap: anywhere; }
+  .ch-name b { font-weight: 600; }
+  .ch-name span { color: var(--text-2); }
+  .ch-sub { display: flex; flex-wrap: wrap; gap: 2px var(--sp-4); margin-top: var(--sp-1); color: var(--text); font-size: var(--fs-sub); line-height: 1.5; font-variant-numeric: tabular-nums; }
+  .ch-sub .k { margin-right: 6px; color: var(--text-2); }
+  .ch-flag { margin-top: var(--sp-1); color: var(--danger); font-size: var(--fs-meta); font-weight: 500; }
+  .pc-list { margin-top: var(--sp-1); }
+  .pc-more {
+    width: 100%; height: 32px; margin-top: var(--sp-1);
+    background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: var(--radius-ctl);
+    font: 500 var(--fs-sub)/1 var(--font); cursor: pointer;
+  }
+  .pc-more:hover { background: var(--hover); border-color: var(--border-strong); }
+  .pc-foot { margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--border); font-size: var(--fs-sub); line-height: 1.5; }
+  .pc-foot div + div { margin-top: var(--sp-1); }
+  .pc-foot .k { margin-right: var(--sp-2); color: var(--text-2); }
+  .pc-foot .due { font-variant-numeric: tabular-nums; }
+
   .sbadge {
     flex: none; display: inline-flex; align-items: center; height: 22px; padding: 0 var(--sp-2);
     border-radius: var(--radius-sm); font-size: var(--fs-meta); font-weight: 600; line-height: 1; white-space: nowrap;
   }
-  .sbadge.done { background: var(--b-done-bg); color: var(--b-done-fg); }
-  .sbadge.prog { background: var(--b-prog-bg); color: var(--b-prog-fg); }
+  .sbadge.prog { background: var(--b-prog-bg); color: var(--b-prog-fg); }      /* 계약 체결 진행 중 */
+  .sbadge.signed { background: var(--b-done-bg); color: var(--b-done-fg); }    /* 계약 체결 완료 (최종 완료 아님) */
   .sbadge.hold { background: var(--b-hold-bg); color: var(--b-hold-fg); }
-  .pc-stage { padding-top: var(--sp-3); border-top: 1px solid var(--border); }
-  .pc-k { color: var(--text-2); font-size: var(--fs-meta); }
-  .pc-v { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); font-size: var(--fs-body); line-height: 1.4; font-weight: 600; }
-  .pc-v i { flex: none; width: 8px; height: 8px; border-radius: 2px; }
-  .pc-s { margin-top: 2px; color: var(--text-2); font-size: var(--fs-sub); line-height: 1.4; font-variant-numeric: tabular-nums; }
-  .pc-foot { margin-top: auto; }
-  .pc-nums { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); font-variant-numeric: tabular-nums; }
-  .pc-nums .l { font-size: var(--fs-sub); color: var(--text-2); }
-  .pc-nums .l b { margin-left: 2px; color: var(--text); font-size: 16px; font-weight: 600; }
-  .pc-nums .r { font-size: var(--fs-body); font-weight: 600; }
-  .pc-foot .meter { margin-top: var(--sp-2); }
-  .pc-tags { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); min-height: 22px; margin-top: var(--sp-3); }
   .tag {
     display: inline-flex; align-items: center; height: 22px; padding: 0 var(--sp-2);
     border-radius: var(--radius-sm); font-size: var(--fs-meta); font-weight: 500; line-height: 1; white-space: nowrap;
@@ -295,7 +328,6 @@
   }
   .tag.hold { background: var(--b-hold-bg); color: var(--b-hold-fg); }
   .tag.warn { background: var(--danger-soft); color: var(--danger); }
-  .pc-none { color: var(--text-2); font-size: var(--fs-meta); }
 
   /* ===================== 목록 (종료일 / 집행일) ===================== */
   .list { display: flex; flex-direction: column; }
@@ -417,7 +449,7 @@
     .grid-lists > :first-child { grid-column: 1 / -1; }
   }
   @media (max-width: 960px) {
-    .pgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pgrid { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 860px) {
     .wrap { padding: var(--sp-6) var(--sp-4) 48px; }
@@ -430,8 +462,13 @@
     .count { margin-left: 0; width: 100%; }
   }
   @media (max-width: 620px) {
-    .pgrid { grid-template-columns: minmax(0, 1fr); }
-    .pc-title { min-height: 0; }
+    .pcard { padding: var(--sp-5); }
+    .pc-head { flex-direction: column; }
+    .pc-tags { justify-content: flex-start; }
+    .pc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--sp-3); }
+    .st:nth-child(3) { padding-left: 0; border-left: 0; }
+    .gaps-body dl { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .gaps-body dd { margin-bottom: var(--sp-2); }
   }
   @media print {
     body { background: #fff; }
@@ -462,9 +499,23 @@
 
   <section class="section" aria-labelledby="projTitle">
     <div class="sec-head">
-      <h2 id="projTitle">사업별 계약 현황</h2>
-      <div class="hint">사업 상태는 소속 계약들의 상태를 요약한 값입니다 · 정렬: 계약 건수 많은 순</div>
+      <h2 id="projTitle">사업별 계약 현황 <span style="font-weight:400;color:var(--text-2);font-size:var(--fs-sub)">상위: 사업 · 하위: 매입계약</span></h2>
+      <div class="hint">정렬: 확인 필요 많은 순 → 미완료 많은 순</div>
     </div>
+    <details class="gaps">
+      <summary><b>엑셀에 없어서 표시하지 못하는 정보</b> · 계약 체결은 최종 완료가 아니며, 아래 정보가 있어야 최종 완료를 판단할 수 있습니다</summary>
+      <div class="gaps-body">
+        <p>현재 엑셀에는 사업명 · 업체 · 계약명 · 담당 PM · 계약 기간 · 계약/선금/잔금 단계 체크 · 집행(예정)일 · 비고만 있습니다. 아래 항목은 임의로 추정하지 않고 비워 두었습니다.</p>
+        <dl>
+          <dt>발주처 · 매출계약 금액 · 매출계약 기간</dt><dd>사업 카드 헤더에 표시하려면 필요합니다. 지금은 사업명을 상위 단위로 사용하고, 기간은 소속 매입계약 기간의 최소~최대로만 표시합니다.</dd>
+          <dt>매입계약 금액</dt><dd>지급 규모와 잔여 금액을 보여 주려면 필요합니다.</dd>
+          <dt>선금 · 잔금 실제 지급 여부와 지급일</dt><dd>지금은 '자금집행 품의'와 '집행(예정)일'만 있어, 품의 완료와 지급 완료를 구분할 수 없습니다. 그래서 '잔금 지급 완료'를 표시하지 않고 '집행 품의 완료'까지만 표시합니다.</dd>
+          <dt>지급 조건 (선금 없음 · 분할 지급 등)</dt><dd>선금이 없는 계약과 아직 시작 전인 계약을 구분하려면 필요합니다.</dd>
+          <dt>최종 정산 · 종료 여부</dt><dd>최종 완료 판정에 필요합니다. 현재는 '정보 미확인'으로 표시합니다.</dd>
+          <dt>매출 검수 · 매출대금 수금</dt><dd>하위 매입계약이 끝나도 매출계약 자체의 종료는 별도 조건이므로, 이 정보가 있어야 상위 사업의 종료를 판단할 수 있습니다.</dd>
+        </dl>
+      </div>
+    </details>
     <div class="pgrid" id="projCards"></div>
   </section>
 
@@ -552,7 +603,7 @@
     { key: 2, name: '품의 완료 · 송부 대기', color: 'var(--st-2)' },
     { key: 3, name: '송부 완료 · 회수 대기', color: 'var(--st-3)' },
     { key: 4, name: '회수 완료 · 보증증권 대기', color: 'var(--st-4)' },
-    { key: 5, name: '체결 완료', color: 'var(--st-5)' }
+    { key: 5, name: '계약 체결 완료', color: 'var(--st-5)' }
   ];
   var HOLD = { key: 0, name: '홀딩', color: 'var(--hold)' };
   function isDone(v) { return v === 'O' || v === '대체'; }
@@ -664,58 +715,100 @@
     var e = document.getElementById(id); e.addEventListener('input', render); e.addEventListener('change', render);
   });
 
-  // ---------- 사업 카드 ----------
+  // ---------- 사업 카드 (상위: 사업 / 하위: 매입계약) ----------
+  //  - 엑셀에는 매출계약 정보와 실제 지급·정산 정보가 없어서, '사업명'을 상위 단위로 쓰고
+  //    지급은 '자금집행 품의'까지만, 최종 완료는 '정보 미확인'으로 표시합니다. (추정하지 않음)
+  var openProj = {};                         // 펼친 사업 (자동 갱신 후에도 유지)
+  var PREVIEW = 3;                           // 접힌 상태에서 보여 줄 매입계약 수
+  function phase(r, steps) {                 // 선금/잔금 단계 요약 (품의 기준)
+    var done = 0, bad = 0;
+    steps.forEach(function (s) { if (isDone(r[s[0]])) done++; if (r[s[0]] === 'X') bad++; });
+    if (bad) return '확인 필요';
+    if (done === steps.length) return '집행 품의 완료';
+    if (done > 0) return '진행 중 ' + done + '/' + steps.length;
+    return '미진행';
+  }
+  function balDone(r) { return BAL_STEPS.every(function (s) { return isDone(r[s[0]]); }); }
+  function childBadge(r) {
+    if (r.hold) return ['hold', '홀딩'];
+    if (r.stageKey < 5) return ['prog', '계약 체결 진행 중'];
+    return balDone(r) ? ['signed', '체결 · 잔금 집행 품의 완료'] : ['signed', '계약 체결 완료 · 지급 진행'];
+  }
+  function childRank(r) {                    // 먼저 확인할 것부터
+    if (r.issues.length) return 0;
+    if (!r.hold && r.stageKey < 5) return 10 + r.stageKey;
+    if (!r.hold && !balDone(r)) return 20;
+    if (r.hold) return 30;
+    return 40;
+  }
+  function childHtml(r) {
+    var b = childBadge(r);
+    var dates = '';
+    if (r.adv_date) dates += '<span><span class="k">선금 집행(예정)일</span>' + esc(r.adv_date) + '</span>';
+    if (r.bal_date) dates += '<span><span class="k">잔금 집행(예정)일</span>' + esc(r.bal_date) + '</span>';
+    return '<div class="ch"><div class="ch-top"><div class="ch-name"><b>' + esc(r.vendor) + '</b> <span>·</span> <span>' + esc(r.name) + '</span></div>' +
+      '<span class="sbadge ' + b[0] + '">' + b[1] + '</span></div>' +
+      '<div class="ch-sub"><span><span class="k">계약</span>' + esc(r.stage.name) + '</span>' +
+      '<span><span class="k">선금</span>' + phase(r, ADV_STEPS) + '</span><span><span class="k">잔금</span>' + phase(r, BAL_STEPS) + '</span>' + dates + '</div>' +
+      (r.issues.length ? '<div class="ch-flag">확인 필요: ' + esc(r.issues.join(', ')) + '</div>' : '') + '</div>';
+  }
   function projectCard(name, rs) {
     var n = rs.length;
-    var d = rs.filter(function (r) { return r.stageKey === 5; }).length;
+    var signed = rs.filter(function (r) { return r.stageKey === 5; }).length;                 // 계약 체결 완료
+    var balAppr = rs.filter(function (r) { return balDone(r); }).length;                        // 잔금 집행 품의 완료 (지급 완료 아님)
     var h = rs.filter(function (r) { return r.hold; }).length;
-    var ip = n - d - h;
     var iss = rs.filter(function (r) { return r.issues.length; }).length;
-    var pct = n ? Math.round(d / n * 100) : 0;
+    var signing = rs.filter(function (r) { return !r.hold && r.stageKey < 5; }).length;
+    var payPending = rs.filter(function (r) { return !r.hold && r.stageKey === 5 && !balDone(r); }).length;
 
-    // 진행 중 계약이 가장 많이 모인 단계 (동률이면 덜 진행된 단계)
-    var cnt = {};
-    rs.forEach(function (r) { if (!r.hold && r.stageKey < 5) cnt[r.stageKey] = (cnt[r.stageKey] || 0) + 1; });
-    var top = null;
-    Object.keys(cnt).forEach(function (k) { if (top === null || cnt[k] > cnt[top] || (cnt[k] === cnt[top] && +k < +top)) top = k; });
-
-    var badge, cur, curColor, sub;
-    if (ip > 0) {
-      badge = ['prog', '진행 중'];
-      cur = STAGES[top - 1].name; curColor = STAGES[top - 1].color;
-      sub = cnt[top] === ip ? '진행 중 ' + ip + '건' : '진행 중 ' + ip + '건 중 ' + cnt[top] + '건';
-    } else if (!h) {
-      badge = ['done', '체결 완료']; cur = '체결 완료'; curColor = STAGES[4].color; sub = '계약 ' + n + '건 모두 체결';
-    } else if (!d) {
-      badge = ['hold', '홀딩']; cur = '홀딩'; curColor = HOLD.color; sub = '계약 ' + n + '건 모두 보류';
-    } else {
-      badge = ['hold', '잔여 홀딩']; cur = '남은 계약 홀딩'; curColor = HOLD.color; sub = '체결 ' + d + '건 외 ' + h + '건 보류';
-    }
+    var starts = rs.map(function (r) { return r.start; }).filter(Boolean).sort();
+    var ends = rs.map(function (r) { return r.end; }).filter(Boolean).sort();
+    var pms = []; rs.forEach(function (r) { if (r.pm && pms.indexOf(r.pm) < 0) pms.push(r.pm); });
+    var meta = [];
+    meta.push('매입계약 기간 <span class="num">' + (starts.length || ends.length ? esc(starts[0] || '?') + ' ~ ' + esc(ends[ends.length - 1] || '?') : '미정') + '</span>');
+    if (pms.length) meta.push('담당 PM ' + esc(pms.join(', ')));
 
     var tags = '';
-    if (h) tags += '<span class="tag hold">홀딩 ' + h + '건</span>';
     if (iss) tags += '<span class="tag warn">확인 필요 ' + iss + '건</span>';
-    if (!tags) tags = '<span class="pc-none">홀딩 · 확인 필요 없음</span>';
+    if (h) tags += '<span class="tag hold">홀딩 ' + h + '건</span>';
+
+    var sorted = rs.slice().sort(function (a, b) { return childRank(a) - childRank(b); });
+    var open = !!openProj[name];
+    var shown = open ? sorted : sorted.slice(0, PREVIEW);
+    var more = n - PREVIEW;
+
+    var rest = [];
+    if (signing) rest.push('계약 체결 진행 ' + signing + '건');
+    if (payPending) rest.push('잔금 집행 품의 전 ' + payPending + '건');
+    if (h) rest.push('홀딩 ' + h + '건');
+
+    // 임박 일정: 종료일 30일 이내 / 집행(예정)일 14일 이내 중 가장 가까운 것 (홀딩 제외)
+    var due = null;
+    rs.forEach(function (r) {
+      if (r.hold) return;
+      [['end', '계약 종료', 30], ['adv_date', '선금 집행(예정)', 14], ['bal_date', '잔금 집행(예정)', 14]].forEach(function (p) {
+        var d = parse(r[p[0]]); if (!d) return;
+        var k = diffDays(d);
+        if (k >= 0 && k <= p[2] && (!due || k < due.k)) due = { k: k, label: p[1], who: r.vendor, date: r[p[0]] };
+      });
+    });
 
     var c = el('article', 'card pcard');
-    c.tabIndex = 0;
-    c.setAttribute('aria-label', name + ', ' + badge[1] + ', 체결 완료 ' + d + ' / 전체 ' + n + '건' + (h ? ', 홀딩 ' + h + '건' : '') + (iss ? ', 확인 필요 ' + iss + '건' : ''));
     c.innerHTML =
-      '<div class="pc-top"><h3 class="pc-title" title="' + esc(name) + '">' + esc(name) + '</h3><span class="sbadge ' + badge[0] + '">' + badge[1] + '</span></div>' +
-      '<div class="pc-stage"><div class="pc-k">현재 진행 단계</div><div class="pc-v"><i style="background:' + curColor + '"></i><span>' + esc(cur) + '</span></div><div class="pc-s">' + esc(sub) + '</div></div>' +
-      '<div class="pc-foot"><div class="pc-nums"><span class="l">체결 완료<b>' + d + '</b> / ' + n + '건</span><span class="r">' + pct + '%</span></div>' +
-      '<div class="meter" role="img" aria-label="체결률 ' + pct + '%"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="pc-tags">' + tags + '</div></div>';
-
-    // 툴팁: 단계별 건수 (마우스 / 키보드 포커스 공통)
-    var lines = STAGES.concat([HOLD]).map(function (s) {
-      var k = rs.filter(function (r) { return r.stage === s; }).length;
-      return k ? esc(s.name) + ' · ' + k + '건' : '';
-    }).filter(Boolean);
-    var html = tipHtml(esc(name), '체결 완료 ' + d + ' / 전체 ' + n + '건', lines);
-    bindTip(c, html);
-    c.addEventListener('focus', function () { var b = c.getBoundingClientRect(); showTip(html, { clientX: b.left + 24, clientY: b.top + 24 }); });
-    c.addEventListener('blur', hideTip);
+      '<div class="pc-head"><h3 class="pc-title">' + esc(name) + '</h3><div class="pc-tags">' + tags + '</div></div>' +
+      '<div class="pc-meta">' + meta.join('<span class="sep">|</span>') + '</div>' +
+      '<div class="pc-stats">' +
+        '<div class="st"><div class="n">' + n + '<small>건</small></div><div class="l">매입계약 전체</div></div>' +
+        '<div class="st"><div class="n">' + signed + '<small>건</small></div><div class="l">계약 체결 완료</div></div>' +
+        '<div class="st" title="자금집행 품의가 끝난 건수입니다. 실제 지급 완료 여부는 엑셀에 없어 알 수 없습니다."><div class="n">' + balAppr + '<small>건</small></div><div class="l">잔금 집행 품의 완료</div></div>' +
+        '<div class="st unk" title="최종 정산·종료 여부가 엑셀에 없어 판단할 수 없습니다."><div class="n">정보 미확인</div><div class="l">최종 완료</div></div>' +
+      '</div>' +
+      '<div class="pc-list">' + shown.map(childHtml).join('') + '</div>' +
+      (more > 0 ? '<button type="button" class="pc-more" aria-expanded="' + open + '">' + (open ? '접기' : '나머지 ' + more + '건 더 보기') + '</button>' : '') +
+      '<div class="pc-foot"><div><span class="k">남은 업무</span>' + (rest.length ? esc(rest.join(' · ')) : '엑셀 기준 남은 업무 없음') + '</div>' +
+      '<div><span class="k">임박 일정</span>' + (due ? '<span class="due">D-' + due.k + ' · ' + esc(due.label) + ' · ' + esc(due.who) + ' · ' + esc(due.date) + '</span>' : '14~30일 이내 일정 없음') + '</div></div>';
+    var btn = c.querySelector('.pc-more');
+    if (btn) btn.addEventListener('click', function () { openProj[name] = !openProj[name]; var nc = projectCard(name, rs); c.replaceWith(nc); var nb = nc.querySelector('.pc-more'); if (nb) nb.focus(); });
     return c;
   }
 
@@ -736,7 +829,7 @@
     kpis.innerHTML = '';
     [
       { l: '전체 계약', v: total, u: '건', n: '엑셀 등록 기준' },
-      { l: '체결 완료', v: done, u: '건', n: '체결률 ' + pct + '%', meter: pct },
+      { l: '계약 체결 완료', v: done, u: '건', n: '계약서 체결 기준 ' + pct + '% · 최종 완료 아님', meter: pct },
       { l: '체결 진행 중', v: inprog, u: '건', n: '홀딩 제외' },
       { l: '홀딩', v: holds, u: '건', n: '진행 보류' },
       { l: '확인 필요', v: issueRows.length, u: '건', n: 'X 표시(문제·거부) 항목 포함', alert: issueRows.length > 0 }
@@ -768,7 +861,9 @@
     projCards.innerHTML = '';
     var projects = [], pmap = {};
     ROWS.forEach(function (r) { if (!pmap[r.project]) { pmap[r.project] = []; projects.push(r.project); } pmap[r.project].push(r); });
-    projects.sort(function (a, b) { return pmap[b].length - pmap[a].length; });
+    function openCount(p) { return pmap[p].filter(function (r) { return !(r.stageKey === 5 && BAL_STEPS.every(function (s) { return isDone(r[s[0]]); })); }).length; }
+    function issueCount(p) { return pmap[p].filter(function (r) { return r.issues.length; }).length; }
+    projects.sort(function (a, b) { return issueCount(b) - issueCount(a) || openCount(b) - openCount(a) || pmap[b].length - pmap[a].length; });
     if (!projects.length) projCards.appendChild(el('div', 'empty', '표시할 사업이 없습니다.'));
     projects.forEach(function (p) { projCards.appendChild(projectCard(p, pmap[p])); });
 
