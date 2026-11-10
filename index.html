@@ -923,6 +923,7 @@
     return fetch(SYNC_URL, { cache: 'no-store', credentials: 'same-origin', signal: ctl ? ctl.signal : undefined })
       .then(function (r) {
         var ct = r.headers.get('content-type') || '';
+        if (r.status === 401) { location.reload(); throw new Error('로그인이 필요합니다.'); }   // 세션 만료 -> 로그인 화면
         if (r.status === 401 || r.status === 403 || r.redirected || ct.indexOf('json') < 0) throw new Error('로그인이 만료됐을 수 있습니다. 페이지를 새로고침해 주세요.');
         if (!r.ok) throw new Error('서버 응답 오류 (' + r.status + ')');
         return r.json();

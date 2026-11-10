@@ -34,3 +34,22 @@ py watcher\watcher.py               # 계속 실행
 ```
 - 부팅 시 자동 실행: 작업 스케줄러 → 로그온 시 `pythonw.exe C:\...\watcher\watcher.py` (시작 위치: 프로젝트 폴더)
 - 로그: `watcher/watcher.log`
+
+## 5. 직원 로그인 (Microsoft 회사 계정) — Cloudflare Zero Trust(카드 등록) 대신 사용
+1. entra.microsoft.com → App registrations → New registration → 이름 `BX 매입계약 대시보드`, **Single tenant**, Redirect URI(Web): `https://purchase-contract-dashboard.pages.dev/auth/callback`
+2. 앱 화면의 Application (client) ID, Directory (tenant) ID 확인
+3. Certificates & secrets → New client secret → **값(Value)** 복사 (한 번만 보임, 채팅에 붙여 넣지 말 것)
+4. wrangler.toml 에 추가:
+```
+[vars]
+MS_TENANT_ID = "<tenant id>"
+MS_CLIENT_ID = "<client id>"
+ALLOWED_EMAIL_DOMAIN = "dtonic.io"
+```
+5. 비밀값 등록(프로젝트 폴더에서):
+```
+npx wrangler pages secret put MS_CLIENT_SECRET --project-name purchase-contract-dashboard
+npx wrangler pages secret put SESSION_SECRET --project-name purchase-contract-dashboard
+```
+   (SESSION_SECRET 은 임의의 긴 문자열 32자 이상: `py -c "import secrets;print(secrets.token_urlsafe(48))"` 결과를 붙여 넣기)
+6. 다시 배포: `py scripts\make_dist.py` → `npx wrangler pages deploy`
