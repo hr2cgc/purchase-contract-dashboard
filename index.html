@@ -420,8 +420,8 @@
   .pg-meta { margin-left: auto; color: var(--text-2); font-size: var(--fs-meta); white-space: nowrap; }
   .crow { min-height: 52px; padding-top: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border); cursor: pointer; }
   .pg .crow:last-child { border-bottom: 0; }
-  .crow:hover, .crow.sel { background: var(--hover); }
-  .crow.sel { box-shadow: inset 3px 0 0 var(--accent); }
+  .crow:hover { background: var(--hover); }
+  .crow.sel { box-shadow: inset 0 0 0 2px var(--accent); }
   button.cname { display: block; min-width: 0; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font: 400 var(--fs-body)/1.45 var(--font); color: var(--text); overflow-wrap: anywhere; }
   button.cname b { font-weight: 600; }
   button.cname span { color: var(--text-2); }
@@ -985,7 +985,8 @@
     var c = projCards.querySelector('.crow.sel button.cname'); if (c) c.focus({ preventScroll: false });
   });
   projCards.addEventListener('click', function (e) {
-    var c = e.target.closest('.crow'); if (c && c.dataset.id) selectContract(+c.dataset.id, true);
+    var c = e.target.closest('.crow'); if (!c || !c.dataset.id) return;
+    if (+c.dataset.id === selId) { selId = null; selKey = ''; renderDetail(); markSelected(); } else selectContract(+c.dataset.id, true);
   });
 
   // ---------- 사업 카드 (상위: 사업 / 하위: 매입계약) ----------
