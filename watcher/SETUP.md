@@ -1,7 +1,7 @@
 # 자동 반영 설정 (한 번만, 약 20분)
 
 ## 0. 준비 (내 PC)
-1. Python 3.9+ 설치 후 `pip install openpyxl`
+1. Python 설치 후 `install-openpyxl.bat` 더블클릭 (또는 `py -m pip install openpyxl`)
 2. 원본 폴더가 OneDrive 로 PC 에 동기화돼 있어야 합니다(탐색기에서 `매입 계약 진행 현황.xlsx` 가 보이고, 초록 체크 또는 "항상 이 디바이스에 유지"). 아니면 SharePoint/Teams 파일 탭에서 "OneDrive에 바로 가기 추가" 또는 "동기화".
 3. 파일 경로 확인 후 `watcher/config.example.json` 을 `config.json` 으로 복사.
 
@@ -13,7 +13,7 @@
 
 ## 2. 배포
 ```
-python scripts/make_dist.py
+py scripts/make_dist.py
 npx wrangler login
 npx wrangler pages deploy dist --project-name purchase-contract-dashboard
 ```
@@ -29,8 +29,8 @@ npx wrangler pages deploy dist --project-name purchase-contract-dashboard
 
 ## 4. 감시 프로그램 실행
 ```
-python watcher\watcher.py --dry-run     # 변환 결과만 확인
-python watcher\watcher.py               # 계속 실행
+py watcher\watcher.py --dry-run     # 변환 결과만 확인
+py watcher\watcher.py               # 계속 실행
 ```
 - 부팅 시 자동 실행: 작업 스케줄러 → 로그온 시 `pythonw.exe C:\...\watcher\watcher.py` (시작 위치: 프로젝트 폴더)
 - 로그: `watcher/watcher.log`

@@ -9,3 +9,4 @@ watcher/*.log*
 dist/
 __pycache__/
 .wrangler/
+wrangler.toml
