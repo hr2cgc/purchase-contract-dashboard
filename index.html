@@ -1011,7 +1011,6 @@
     var pms = []; rs.forEach(function (r) { if (r.pm && pms.indexOf(r.pm) < 0) pms.push(r.pm); });
     var meta = ['매입계약 ' + rs.length + '건' + (extN ? ' (매입 외 ' + extN + '건 별도)' : '')];
     if (pms.length) meta.push('담당 PM ' + esc(pms.join(', ')));
-    if (starts.length || ends.length) meta.push('<span class="num">' + esc(starts[0] || '?') + ' ~ ' + esc(ends[ends.length - 1] || '?') + '</span>');
     var tags = '';
     if (iss) tags += '<span class="tag warn">확인 필요 ' + iss + '건</span>';
     if (h) tags += '<span class="tag hold">홀딩 ' + h + '건</span>';
