@@ -1,0 +1,8 @@
+name = "purchase-contract-dashboard"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-11-01"
+
+# 계약 데이터를 담는 KV (ID는 비밀 값이 아닙니다. 접근하려면 Cloudflare 토큰이 필요합니다)
+[[kv_namespaces]]
+binding = "CONTRACTS_KV"
+id = "4546f9f9481f4d2da0bee383bd07acc3"
