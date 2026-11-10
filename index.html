@@ -309,15 +309,20 @@
 
   .ch { padding: var(--sp-3) 0; border-top: 1px solid var(--border); }
   .ch:first-child { border-top: 0; }
-  .ch-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
-  .ch-name { min-width: 0; font-size: var(--fs-body); line-height: 1.45; overflow-wrap: anywhere; }
-  .ch-name b { font-weight: 600; }
-  .ch-name span { color: var(--text-2); }
-  .ch-sub { display: flex; flex-wrap: wrap; gap: 2px var(--sp-4); margin-top: var(--sp-1); color: var(--text); font-size: var(--fs-sub); line-height: 1.5; font-variant-numeric: tabular-nums; }
-  .ch-sub .k { margin-right: 6px; color: var(--text-2); }
-  .ch-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: var(--sp-1); color: var(--text-2); font-size: var(--fs-meta); line-height: 1.5; overflow-wrap: anywhere; }
-  .ch-note .k { margin-right: 6px; font-weight: 500; }
-  .ch-flag { margin-top: var(--sp-1); color: var(--danger); font-size: var(--fs-meta); font-weight: 500; }
+  button.ch-name, button.linkbtn {
+    display: block; max-width: 100%; padding: 0; margin: 0; border: 0; background: none; text-align: left; cursor: pointer;
+    font: 400 var(--fs-body)/1.45 var(--font); color: var(--text); overflow-wrap: anywhere;
+  }
+  button.ch-name b { font-weight: 600; }
+  button.ch-name span { color: var(--text-2); }
+  button.ch-name:hover, button.linkbtn:hover { text-decoration: underline; text-underline-offset: 3px; }
+  button.ch-name:focus-visible, button.linkbtn:focus-visible, .xbtn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); border-radius: 4px; }
+  .ch-rows { margin-top: var(--sp-1); display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 2px var(--sp-2); font-size: var(--fs-sub); line-height: 1.5; }
+  .ch-rows .k { color: var(--text-2); font-size: var(--fs-meta); line-height: 1.7; }
+  .ch-rows .v { min-width: 0; overflow-wrap: anywhere; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .warn-t { color: var(--danger); }
+  .mut-t { color: var(--text-2); }
   .pc-list { margin-top: var(--sp-1); }
   .pc-more {
     width: 100%; height: 32px; margin-top: var(--sp-1);
@@ -330,13 +335,6 @@
   .pc-foot .k { margin-right: var(--sp-2); color: var(--text-2); }
   .pc-foot .due { font-variant-numeric: tabular-nums; }
 
-  .sbadge {
-    flex: none; display: inline-flex; align-items: center; height: 22px; padding: 0 var(--sp-2);
-    border-radius: var(--radius-sm); font-size: var(--fs-meta); font-weight: 600; line-height: 1; white-space: nowrap;
-  }
-  .sbadge.prog { background: var(--b-prog-bg); color: var(--b-prog-fg); }      /* 계약 체결 진행 중 */
-  .sbadge.signed { background: var(--b-done-bg); color: var(--b-done-fg); }    /* 계약 체결 완료 (최종 완료 아님) */
-  .sbadge.hold { background: var(--b-hold-bg); color: var(--b-hold-fg); }
   .tag {
     display: inline-flex; align-items: center; height: 22px; padding: 0 var(--sp-2);
     border-radius: var(--radius-sm); font-size: var(--fs-meta); font-weight: 500; line-height: 1; white-space: nowrap;
@@ -395,57 +393,59 @@
   .filters input[type=checkbox] { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
   .count { margin-left: auto; color: var(--text-2); font-size: var(--fs-sub); font-variant-numeric: tabular-nums; }
 
-  .stepkey {
-    display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: center;
-    margin-bottom: var(--sp-3); font-size: var(--fs-meta); color: var(--text-2);
-  }
-  .stepkey > span { display: inline-flex; align-items: center; gap: 6px; }
-
   /* ===================== 표 ===================== */
   .tablewrap { overflow-x: auto; border-top: 1px solid var(--border); }
-  table { border-collapse: collapse; width: 100%; font-size: var(--fs-body); min-width: 1080px; }
+  table { border-collapse: collapse; width: 100%; font-size: var(--fs-body); min-width: 1120px; }
   th {
     position: sticky; top: 0; background: var(--surface);
     text-align: left; white-space: nowrap;
     padding: var(--sp-3) var(--sp-2); border-bottom: 1px solid var(--border-strong);
     font-size: var(--fs-meta); font-weight: 600; color: var(--text-2);
   }
-  td { padding: var(--sp-3) var(--sp-2); border-bottom: 1px solid var(--border); vertical-align: top; }
+  td { padding: var(--sp-3) var(--sp-2); border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr.row { cursor: pointer; }
   tr.row:hover td { background: var(--hover); }
   tr.grpstart td { border-top: 1px solid var(--border-strong); }
   tr.grpstart:first-child td { border-top: 0; }
-  td.proj { min-width: 128px; max-width: 190px; color: var(--text); font-size: var(--fs-sub); font-weight: 500; line-height: 1.45; }
+  td.proj { width: 150px; max-width: 190px; color: var(--text); font-size: var(--fs-sub); font-weight: 500; }
   td.proj.cont { color: transparent; }
-  td.vendor { font-weight: 600; white-space: nowrap; }
-  td.cname { min-width: 160px; max-width: 260px; }
-  td.pm { color: var(--text-2); font-size: var(--fs-sub); min-width: 68px; }
-  td.period, td.dates { color: var(--text-2); font-size: var(--fs-sub); font-variant-numeric: tabular-nums; }
-  td.period { width: 108px; line-height: 1.5; }
-  td.dates { white-space: nowrap; }
-  td.note { min-width: 140px; max-width: 240px; color: var(--text-2); font-size: var(--fs-sub); line-height: 1.5; }
-  td .dim { color: var(--text-2); opacity: .7; }
-
-  .dots { display: flex; align-items: center; gap: 3px; white-space: nowrap; height: 22px; }
-  .gap { width: 8px; }
-  .dot {
-    width: 12px; height: 12px; border-radius: 50%;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 8px; line-height: 1; font-weight: 700; color: #fff; flex: none;
+  td.who { width: 240px; max-width: 280px; }
+  td.who b { display: block; font-weight: 600; }
+  td.who .cn { color: var(--text-2); font-size: var(--fs-sub); overflow-wrap: anywhere; }
+  td.pm { color: var(--text-2); font-size: var(--fs-sub); width: 72px; }
+  td.cs, td.ps, td.nx { width: 190px; font-size: var(--fs-sub); overflow-wrap: anywhere; }
+  td.nx { width: 210px; }
+  td.sc { width: 190px; font-size: var(--fs-sub); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.sc .k { color: var(--text-2); margin-right: 6px; }
+  td.go { width: 56px; text-align: right; }
+  td .sub, .sub { display: block; color: var(--text-2); font-size: var(--fs-meta); line-height: 1.5; }
+  td .dim { color: var(--text-2); opacity: .8; }
+  .xbtn {
+    height: 28px; padding: 0 var(--sp-2); white-space: nowrap; background: transparent; color: var(--accent);
+    border: 1px solid var(--border); border-radius: var(--radius-ctl); font: 500 var(--fs-sub)/1 var(--font); cursor: pointer;
   }
-  .dot.O { background: var(--accent); }
-  .dot.sub { background: var(--st-1); color: #0B1F44; }
-  .dot.none { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dot-empty); }
-  .dot.X { background: var(--danger); color: #fff; }
-  .dot.na { background: var(--border); color: var(--text-2); }
+  .xbtn:hover { background: var(--hover); border-color: var(--border-strong); }
 
-  .badge {
-    display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 var(--sp-2);
-    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
-    font-size: var(--fs-meta); font-weight: 500; white-space: nowrap; color: var(--text); background: var(--surface);
+  /* ===================== 계약 상세 ===================== */
+  dialog#detail {
+    width: min(720px, calc(100% - 32px)); max-height: calc(100% - 48px); padding: 0;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); border-radius: 10px;
   }
-  .badge i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex: none; }
-  .flag { display: block; margin-top: 6px; color: var(--danger); font-size: var(--fs-meta); font-weight: 500; line-height: 1.4; }
-
+  dialog#detail::backdrop { background: rgba(17, 24, 39, .45); }
+  .dt { padding: var(--sp-5) var(--sp-6) var(--sp-6); }
+  .dt-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); }
+  .dt-head h3 { margin: 0; font-size: 18px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+  .dt-head .sub { margin-top: 2px; }
+  .dt h4 { margin: var(--sp-5) 0 var(--sp-1); font-size: var(--fs-meta); font-weight: 600; color: var(--text-2); }
+  .dt-sum { display: grid; grid-template-columns: 110px minmax(0, 1fr); border-top: 1px solid var(--border); }
+  .dt-sum > div { padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); font-size: var(--fs-body); line-height: 1.5; overflow-wrap: anywhere; }
+  .dt-sum > .k { color: var(--text-2); font-size: var(--fs-sub); }
+  .dt-sum .sub { margin-top: 0; }
+  .dt-list { border-top: 1px solid var(--border); }
+  .dt-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); font-size: var(--fs-sub); line-height: 1.5; }
+  .dt-list .s { text-align: right; white-space: nowrap; }
+  .dt-note { margin: 0; padding: var(--sp-2) 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-sub); line-height: 1.6; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .dt-basis { margin: 0; padding: var(--sp-2) 0 0 var(--sp-4); color: var(--text-2); font-size: var(--fs-sub); line-height: 1.6; }
   /* ===================== 툴팁 ===================== */
   #tip {
     position: fixed; z-index: 10; pointer-events: none; width: max-content; max-width: 320px;
@@ -556,7 +556,7 @@
   <section class="card">
     <div class="card-head">
       <h2>전체 계약 목록</h2>
-      <div class="hint">진행 표시는 왼쪽부터 계약 단계 → 선금 단계 → 잔금 단계 순서입니다. 점 위에 마우스를 올리면 항목명이 보입니다.</div>
+      <div class="hint">계약 상태와 지급 상태는 엑셀에 기록된 값만으로 표시합니다. 행을 누르면 단계별 기록과 원본 비고를 볼 수 있습니다. 실제 지급 완료 여부는 엑셀에 없어 표시하지 않습니다.</div>
     </div>
     <div class="filters">
       <input type="search" id="q" placeholder="업체명 · 계약명 · 사업명 · 비고 검색" aria-label="검색">
@@ -565,19 +565,11 @@
       <label><input type="checkbox" id="fissue"> 확인 필요만</label>
       <span class="count" id="count"></span>
     </div>
-    <div class="stepkey">
-      <span><span class="dot O"></span>완료</span>
-      <span><span class="dot sub">대</span>각서 등으로 대체</span>
-      <span><span class="dot none"></span>미진행</span>
-      <span><span class="dot X">×</span>문제 · 확인 필요</span>
-      <span><span class="dot na">–</span>해당 없음 · 진행 안 함 (엑셀 회색 칸)</span>
-    </div>
     <div class="tablewrap">
       <table>
         <thead>
           <tr>
-            <th>사업명</th><th>업체명</th><th>계약명</th><th>담당 PM</th><th>계약 기간</th>
-            <th>진행 (계약5 · 선금3 · 잔금2)</th><th>현재 상태</th><th>집행(예정)일</th><th>비고</th>
+            <th>사업명</th><th>업체 · 계약명</th><th>담당 PM</th><th>계약 상태</th><th>지급 상태</th><th>다음 확인 사항</th><th>주요 일정</th><th><span class="sr">상세</span></th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -585,6 +577,7 @@
     </div>
   </section>
 </div>
+<dialog id="detail" aria-labelledby="dtTitle"><div class="dt" id="dtBody"></div></dialog>
 <div id="tip" role="tooltip"></div>
 
 <script src="config.js" onerror="void 0"></script>
@@ -742,21 +735,112 @@
   }
   document.getElementById('todoMore').addEventListener('click', function () { todoState.open = !todoState.open; renderTodo(); });
 
+  // ---------- 상태 설명 (계약 상태 / 지급 상태 / 다음 확인 사항 / 주요 일정) ----------
+  //  - 진행률(%)이나 완료 항목 개수로 판단하지 않습니다. 기록된 값만 짧은 문장으로 풀어 씁니다.
+  //  - 회색 칸 = 해당 없음·보류, 빈 칸 = 기록 없음. 어느 쪽도 '미완료 경고'로 쓰지 않습니다.
+  //  - 세금계산서·집행 품의·집행(예정)일은 지급 '준비' 기록이며 지급 완료의 근거가 아닙니다.
+  var NARA_RE = /나라장터/;
+  var NOTE_SPLIT_RE = /분할|\d\s*~\s*\d\s*차|\d\s*차/;
+  var NOTE_BAL100_RE = /잔금\s*\(?\s*100\s*%/;
+  function dateTxt(key, r) {
+    var d = parse(r[key]); if (!d) return null;
+    var n = diffDays(d);
+    return { date: r[key], n: n, t: n === 0 ? '오늘' : n > 0 ? 'D-' + n : '경과' };
+  }
+  function describe(r) {
+    var note = r.note || '', nara = NARA_RE.test(note);
+    var d = { contract: '', pay: [], paySub: '', next: [], nextWarn: false, dates: [], basis: [] };
+
+    // 1) 계약 상태
+    if (r.ext) d.contract = '매입 외 (집계 제외)';
+    else if (r.hold) d.contract = '홀딩';
+    else if (r.sep) d.contract = (isDone(r.approval) ? '품의 완료 · ' : '') + (nara ? '나라장터로 별도 진행' : '송부·회수 없이 별도 진행');
+    else if (r.stageKey === 1) d.contract = isDone(r.legal) ? '법무검토 완료 · 품의 전' : isNA(r, 'legal') ? '품의 전 (법무검토 해당 없음)' : '법무검토 · 품의 전';
+    else if (r.stageKey === 2) d.contract = '품의 완료 · 계약서 송부 예정';
+    else if (r.stageKey === 3) d.contract = '송부 완료 · 회수 대기';
+    else if (r.stageKey === 4) d.contract = r.bond === 'X' ? '회수 완료 · 보증증권 문제' : '회수 완료 · 보증증권 대기';
+    else d.contract = '계약 체결 완료' + (r.bond === '대체' ? ' (보증증권은 각서 등으로 대체)' : '');
+
+    // 2) 지급 관련 (준비 상태만. 실제 지급 확인 정보는 엑셀에 없음)
+    function part(label, steps) {
+      var app = steps.filter(function (s) { return !isNA(r, s[0]); });
+      if (!app.length) return null;
+      var nm = function (list) { return list.map(function (s) { return SHORT[s[0]]; }).join('·'); };
+      var bad = app.filter(function (s) { return r[s[0]] === 'X'; });
+      var done = app.filter(function (s) { return isDone(r[s[0]]); });
+      if (bad.length) return label + ' ' + nm(bad) + ' 문제';
+      var appr = app.filter(function (s) { return /appr$/.test(s[0]); })[0];
+      if (appr && isDone(r[appr[0]])) {
+        var miss = app.filter(function (s) { return s !== appr && !isDone(r[s[0]]); });
+        return label + ' 집행 품의 완료' + (miss.length ? ' · ' + nm(miss) + ' 기록 없음' : '');
+      }
+      if (done.length === app.length) return label + ' ' + nm(app) + ' 완료';
+      if (done.length) return label + ' 준비 중 · ' + nm(done) + ' 완료';
+      return label + ' 기록 없음';
+    }
+    if (r.ext) d.pay = [];
+    else if (r.hold) d.pay = ['홀딩 중'];
+    else {
+      var a = part('선금', ADV_STEPS), b = part('잔금', BAL_STEPS);
+      if (a) d.pay.push(a); else if (b) d.pay.push('선금 해당 없음');
+      if (b) d.pay.push(b); else if (a) d.pay.push('잔금 해당 없음');
+      if (!a && !b) {
+        if (NOTE_SPLIT_RE.test(note)) d.pay.push('분할 지급 (비고 참조)');
+        else if (NOTE_BAL100_RE.test(note)) d.pay.push('잔금 100% 조건 (비고 참조)');
+        else if (PAY_NOTE_RE.test(note)) d.pay.push('지급 조건은 비고 참조');
+        else d.pay.push('지급 단계 해당 없음');
+      }
+      var prep = ADV_STEPS.concat(BAL_STEPS).some(function (s) { return /tax$|appr$/.test(s[0]) && !isNA(r, s[0]); });
+      if (prep) d.paySub = '실제 지급 확인 정보 없음';
+    }
+
+    // 3) 다음 확인 사항 (기록으로 판단 가능한 것만, 중요한 순서)
+    var bad = []; CONTRACT_STEPS.concat(ADV_STEPS, BAL_STEPS).forEach(function (s) { if (r[s[0]] === 'X') bad.push(s[1]); });
+    if (!r.ext) {
+      if (bad.length) { d.next.push(bad.join(', ') + ' 문제 확인'); d.nextWarn = true; }
+      if (r.noteBlocked) { d.next.push('비고의 거부·반려 내용 확인'); d.nextWarn = true; }
+      if (r.hold) d.next.push('홀딩 사유 확인 (비고 참조)');
+      else {
+        if (r.sep) d.next.push(nara ? '나라장터 계약 진행 확인' : '별도 절차 진행 확인');
+        else if (r.stageKey === 1) d.next.push('품의 진행 확인');
+        else if (r.stageKey === 2) d.next.push('계약서 송부');
+        else if (r.stageKey === 3) d.next.push('계약서 회수 확인');
+        else if (r.stageKey === 4 && r.bond !== 'X') d.next.push('계약보증증권 확인');
+        if (!r.sep && r.stageKey < 5 && (isDone(r.adv_tax) || isDone(r.adv_appr))) d.next.push('계약 체결 전에 선금 절차가 기록됨 · 순서 확인');
+        [['adv_date', '선금'], ['bal_date', '잔금']].forEach(function (p) {
+          var t = dateTxt(p[0], r); if (!t) return;
+          if (t.n < 0) d.next.push(p[1] + ' 집행(예정)일 경과 · 실제 지급 여부 확인');
+          else if (t.n <= 14) d.next.push(p[1] + ' 집행(예정)일 ' + t.t + ' · 집행 준비 확인');
+        });
+        if (NOTE_SPLIT_RE.test(note)) d.next.push('분할 지급 일정은 비고 확인');
+        else if (NOTE_BAL100_RE.test(note)) d.next.push('잔금 100% 조건은 비고 확인');
+        var te = dateTxt('end', r); if (te && te.n >= 0 && te.n <= 30) d.next.push('계약 종료일 ' + te.t + ' 임박');
+      }
+      if (!d.next.length) d.next.push('기록상 후속 업무 없음');
+    } else d.next.push('확인 대상 아님 (매입계약 아님)');
+
+    // 4) 주요 일정
+    [['end', '계약 종료'], ['adv_date', '선금 집행(예정)'], ['bal_date', '잔금 집행(예정)']].forEach(function (p) {
+      if (!r[p[0]]) return;
+      var t = dateTxt(p[0], r);
+      d.dates.push({ label: p[1], date: r[p[0]], t: t ? t.t : '', n: t ? t.n : null });
+    });
+
+    // 5) 판정 근거 (상세 보기에 표시)
+    var lastDone = ''; CONTRACT_STEPS.forEach(function (s) { if (isDone(r[s[0]])) lastDone = s[1]; });
+    var grayNames = CONTRACT_STEPS.concat(ADV_STEPS, BAL_STEPS).filter(function (s) { return isNA(r, s[0]); }).map(function (s) { return s[1]; });
+    if (r.ext) d.basis.push('비고에 파트너십·매입 아님 표현이 있어 매입계약 집계에서 제외했습니다.');
+    else if (r.hold) d.basis.push('비고에 \'홀딩\'이 있어 홀딩으로 분류했습니다.');
+    else if (r.sep) d.basis.push('계약서 송부·회수·계약보증증권 칸이 모두 회색(해당 없음)이라 별도 절차로 분류했습니다.' + (nara ? ' 비고에 나라장터 언급이 있습니다.' : ''));
+    else d.basis.push(lastDone ? '계약 상태는 완료로 기록된 가장 마지막 계약 단계(' + lastDone + ')를 기준으로 했습니다.' : '완료로 기록된 계약 단계가 없습니다.');
+    if (grayNames.length) d.basis.push('엑셀 회색 칸(해당 없음 · 보류): ' + grayNames.join(', ') + ' — 미완료로 보지 않았습니다.');
+    if (r.noteBlocked) d.basis.push('X 표시는 없지만 비고에 거부·반려가 있어 확인 필요로 분류했습니다.');
+    d.basis.push('세금계산서·집행 품의·집행(예정)일은 지급 준비 기록입니다. 실제 지급 완료 여부는 엑셀에 없어 \'지급 완료\'로 표시하지 않습니다.');
+    return d;
+  }
+  function payShort(d) { return d.pay.join(' · '); }
+
   // ---------- 표 ----------
-  function dot(r, s) {
-    var v = r[s[0]], na = isNA(r, s[0]);
-    var cls = v === 'O' ? 'O' : v === 'X' ? 'X' : v === '대체' ? 'sub' : na ? 'na' : 'none';
-    var txt = v === 'X' ? '×' : v === '대체' ? '대' : na ? '–' : '';
-    var label = s[1] + ': ' + (v === 'O' ? '완료' : v === 'X' ? '문제 · 확인 필요' : v === '대체' ? '각서 등으로 대체' : na ? '해당 없음 · 진행 안 함 (엑셀 회색 칸)' : '미진행');
-    return '<span class="dot ' + cls + '" title="' + esc(label) + '">' + txt + '</span>';
-  }
-  function fmtPeriod(r) { return (r.start || r.end) ? esc(r.start || '?') + '<br>~ ' + esc(r.end || '?') : '<span class="dim">미정</span>'; }
-  function fmtDates(r) {
-    var out = [];
-    if (r.adv_date) out.push('선금 ' + esc(r.adv_date));
-    if (r.bal_date) out.push('잔금 ' + esc(r.bal_date));
-    return out.length ? out.join('<br>') : '<span class="dim">-</span>';
-  }
   function render() {
     var q = fq.value.trim().toLowerCase();
     var pm = fpm.value, st = fstatus.value, onlyIssue = fissue.checked;
@@ -771,27 +855,73 @@
     var prev = null;
     vis.forEach(function (r) {
       var first = r.project !== prev; prev = r.project;
-      var tr = el('tr', 'row' + (first ? ' grpstart' : ''));
-      var dots = '<div class="dots">' + CONTRACT_STEPS.map(function (s) { return dot(r, s); }).join('') + '<span class="gap"></span>' +
-        ADV_STEPS.map(function (s) { return dot(r, s); }).join('') + '<span class="gap"></span>' + BAL_STEPS.map(function (s) { return dot(r, s); }).join('') + '</div>';
-      var badge = '<span class="badge"><i style="background:' + r.stage.color + '"></i>' + esc(r.stage.name) + '</span>' +
-        (r.issues.length ? '<span class="flag">확인 필요: ' + esc(r.issues.join(', ')) + '</span>' : '');
+      var d = describe(r);
+      var tr = el('tr', 'row' + (first ? ' grpstart' : '')); tr.dataset.id = r.id;
+      var nx = '<span' + (d.nextWarn ? ' class="warn-t"' : '') + '>' + esc(d.next[0]) + '</span>' +
+        (d.next[1] ? '<span class="sub">' + esc(d.next[1]) + '</span>' : '') + (d.next.length > 2 ? '<span class="sub">외 ' + (d.next.length - 2) + '건</span>' : '');
+      var ps = d.pay.map(function (t) { return '<div>' + esc(t) + '</div>'; }).join('') + (d.paySub ? '<span class="sub">' + esc(d.paySub) + '</span>' : '');
+      var sc = d.dates.length ? d.dates.map(function (x) {
+        return '<div><span class="k">' + esc(x.label) + '</span> ' + esc(x.date) + (x.t ? ' <span class="' + (x.n < 0 ? 'mut-t' : '') + '">' + x.t + '</span>' : '') + '</div>';
+      }).join('') : '<span class="dim">-</span>';
       tr.innerHTML = '<td class="proj' + (first ? '' : ' cont') + '">' + (first ? esc(r.project) : '') + '</td>' +
-        '<td class="vendor">' + esc(r.vendor) + '</td><td class="cname">' + esc(r.name) + '</td><td class="pm">' + esc(r.pm) + '</td>' +
-        '<td class="period">' + fmtPeriod(r) + '</td><td>' + dots + '</td><td>' + badge + '</td>' +
-        '<td class="dates">' + fmtDates(r) + '</td><td class="note">' + esc(r.note) + '</td>';
+        '<td class="who"><b>' + esc(r.vendor) + '</b><span class="cn">' + esc(r.name) + '</span></td><td class="pm">' + esc(r.pm) + '</td>' +
+        '<td class="cs">' + esc(d.contract) + '</td><td class="ps">' + ps + '</td><td class="nx">' + nx + '</td><td class="sc">' + sc + '</td>' +
+        '<td class="go"><button type="button" class="xbtn" aria-label="' + esc(r.vendor + ' 상세 보기') + '">상세</button></td>';
       tbody.appendChild(tr);
     });
-    if (!vis.length) tbody.innerHTML = '<tr><td colspan="9" class="empty">조건에 맞는 계약이 없습니다.</td></tr>';
+    if (!vis.length) tbody.innerHTML = '<tr><td colspan="8" class="empty">조건에 맞는 계약이 없습니다.</td></tr>';
     document.getElementById('count').textContent = vis.length + ' / ' + total + '건';
   }
   ['q', 'fpm', 'fstatus', 'fissue'].forEach(function (id) {
     var e = document.getElementById(id); e.addEventListener('input', render); e.addEventListener('change', render);
   });
 
+  // ---------- 계약 상세 ----------
+  var dlg = document.getElementById('detail'), dtBody = document.getElementById('dtBody');
+  function stepState(r, key) {
+    var v = r[key];
+    if (v === 'O') return ['완료', ''];
+    if (v === '대체') return ['각서 등으로 대체', ''];
+    if (v === 'X') return ['문제 표시 (X)', 'warn-t'];
+    if (isNA(r, key)) return ['해당 없음 (엑셀 회색)', 'mut-t'];
+    return ['기록 없음', 'mut-t'];
+  }
+  function openDetail(id) {
+    var r = ROWS[id]; if (!r) return;
+    var d = describe(r);
+    function group(title, steps, dateKey, dateLabel) {
+      var h = '<h4>' + title + '</h4><div class="dt-list">' + steps.map(function (s) {
+        var st = stepState(r, s[0]);
+        return '<div><span>' + esc(s[1]) + '</span><span class="s ' + st[1] + '">' + st[0] + '</span></div>';
+      }).join('');
+      if (dateKey) h += '<div><span>' + dateLabel + '</span><span class="s ' + (r[dateKey] ? '' : 'mut-t') + '">' + (r[dateKey] ? esc(r[dateKey]) : isNA(r, dateKey) ? '해당 없음 (엑셀 회색)' : '기록 없음') + '</span></div>';
+      return h + '</div>';
+    }
+    var period = (r.start || r.end) ? esc(r.start || '?') + ' ~ ' + esc(r.end || '?') : '미정';
+    dtBody.innerHTML =
+      '<div class="dt-head"><div><h3 id="dtTitle">' + esc(r.vendor) + ' · ' + esc(r.name) + '</h3><span class="sub">' + esc(r.project) + ' · 담당 PM ' + esc(r.pm || '-') + ' · 계약 기간 ' + period + '</span></div>' +
+      '<button type="button" class="xbtn" id="dtClose">닫기</button></div>' +
+      '<h4>요약</h4><div class="dt-sum">' +
+      '<div class="k">계약 상태</div><div>' + esc(d.contract) + '</div>' +
+      '<div class="k">지급 관련</div><div>' + (d.pay.length ? d.pay.map(function (t) { return '<div>' + esc(t) + '</div>'; }).join('') : '-') + (d.paySub ? '<span class="sub">' + esc(d.paySub) + '</span>' : '') + '</div>' +
+      '<div class="k">다음 확인 사항</div><div>' + d.next.map(function (t, i) { return '<div' + (d.nextWarn && i === 0 ? ' class="warn-t"' : '') + '>' + esc(t) + '</div>'; }).join('') + '</div>' +
+      '<div class="k">주요 일정</div><div>' + (d.dates.length ? d.dates.map(function (x) { return '<div>' + esc(x.label) + ' ' + esc(x.date) + (x.t ? ' · ' + x.t : '') + '</div>'; }).join('') : '-') + '</div></div>' +
+      group('계약 진행 기록', CONTRACT_STEPS) +
+      group('선금 관련 절차', ADV_STEPS, 'adv_date', '선금 집행(예정)일') +
+      group('잔금 관련 절차', BAL_STEPS, 'bal_date', '잔금 집행(예정)일') +
+      '<h4>원본 비고</h4>' + (r.note ? '<p class="dt-note">' + esc(r.note) + '</p>' : '<p class="dt-note mut-t">비고 없음</p>') +
+      '<h4>판정 근거</h4><ul class="dt-basis">' + d.basis.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
+    document.getElementById('dtClose').addEventListener('click', function () { dlg.close(); });
+    if (!dlg.open) dlg.showModal();
+    dlg.scrollTop = 0;
+  }
+  dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+  tbody.addEventListener('click', function (e) { var tr = e.target.closest('tr.row'); if (tr) openDetail(+tr.dataset.id); });
+
   // ---------- 사업 카드 (상위: 사업 / 하위: 매입계약) ----------
   //  - 엑셀에는 매출계약 정보와 실제 지급·정산 정보가 없어서, '사업명'을 상위 단위로 쓰고
   //    지급은 '자금집행 품의'까지만, 최종 완료는 '정보 미확인'으로 표시합니다. (추정하지 않음)
+  projCards.addEventListener('click', function (e) { var b = e.target.closest('button.ch-name'); if (b) openDetail(+b.dataset.id); });
   var openProj = {};                         // 펼친 사업 (자동 갱신 후에도 유지)
   var PREVIEW = 3;                           // 접힌 상태에서 보여 줄 매입계약 수
   var SHORT = { adv_bond: '보증증권', adv_tax: '세금계산서', adv_appr: '집행 품의', bal_tax: '세금계산서', bal_appr: '집행 품의' };
@@ -823,17 +953,6 @@
     return ok ? 'done' : 'wip';
   }
   function balDone(r) { return balState(r) === 'done'; }
-  function childBadge(r) {
-    if (r.ext) return ['hold', '매입 외'];
-    if (r.hold) return ['hold', '홀딩'];
-    if (r.sep) return ['prog', '별도 절차 진행'];
-    if (r.stageKey < 5) return ['prog', '계약 체결 진행 중'];
-    var ps = payState(r);
-    if (ps === 'done') return ['signed', '체결 · 집행 품의 완료'];
-    if (ps === 'na') return ['signed', '계약 체결 완료'];
-    if (ps === 'note') return ['signed', '체결 완료 · 지급 조건 비고 참조'];
-    return ['signed', '계약 체결 완료 · 지급 진행'];
-  }
   function childRank(r) {                    // 먼저 확인할 것부터
     if (r.ext) return 50;
     if (r.issues.length) return 0;
@@ -843,16 +962,11 @@
     return 40;
   }
   function childHtml(r) {
-    var b = childBadge(r);
-    var dates = '';
-    if (r.adv_date) dates += '<span><span class="k">선금 집행(예정)일</span>' + esc(r.adv_date) + '</span>';
-    if (r.bal_date) dates += '<span><span class="k">잔금 집행(예정)일</span>' + esc(r.bal_date) + '</span>';
-    return '<div class="ch"><div class="ch-top"><div class="ch-name"><b>' + esc(r.vendor) + '</b> <span>·</span> <span>' + esc(r.name) + '</span></div>' +
-      '<span class="sbadge ' + b[0] + '">' + b[1] + '</span></div>' +
-      '<div class="ch-sub"><span><span class="k">계약</span>' + (r.stageKey === 1 && isNA(r, 'legal') ? '품의 전 (법무검토 해당 없음)' : esc(r.stage.name)) + '</span>' +
-      '<span><span class="k">선금</span>' + phase(r, ADV_STEPS) + '</span><span><span class="k">잔금</span>' + phase(r, BAL_STEPS) + '</span>' + dates + '</div>' +
-      (r.issues.length ? '<div class="ch-flag">확인 필요: ' + esc(r.issues.join(', ')) + '</div>' : '') +
-      (r.note ? '<div class="ch-note" title="' + esc(r.note) + '"><span class="k">비고</span>' + esc(r.note) + '</div>' : '') + '</div>';
+    var d = describe(r);
+    return '<div class="ch"><button type="button" class="ch-name" data-id="' + r.id + '"><b>' + esc(r.vendor) + '</b> <span>·</span> <span>' + esc(r.name) + '</span></button>' +
+      '<div class="ch-rows"><span class="k">계약</span><span class="v">' + esc(d.contract) + '</span>' +
+      '<span class="k">지급</span><span class="v">' + esc(payShort(d) || '-') + '</span>' +
+      (r.ext ? '' : '<span class="k">확인</span><span class="v' + (d.nextWarn ? ' warn-t' : '') + '">' + esc(d.next[0]) + '</span>') + '</div></div>';
   }
   function projectCard(name, rs) {
     var all = rs, extN = rs.filter(function (r) { return r.ext; }).length;
@@ -922,6 +1036,7 @@
   // ---------- 화면 전체 구성 (데이터가 바뀌면 이 함수로 다시 그림) ----------
   function build(rows, keepFilters) {
     hideTip();
+    if (dlg.open) dlg.close();
     var keep = keepFilters ? { q: fq.value, pm: fpm.value, st: fstatus.value, issue: fissue.checked } : null;
     ROWS = rows.map(function (r, i) { var c = {}; for (var k in r) c[k] = r[k]; c.id = i; return c; });
     ROWS.forEach(classify);
