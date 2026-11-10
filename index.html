@@ -411,11 +411,11 @@
   .sb.bad { background: var(--danger-soft); color: var(--danger); }
   .sb.warn { background: var(--warn-soft, var(--b-hold-bg)); color: var(--warn); }
   /* ===== 사업별 계약 목록 (한 열, 열 정렬) ===== */
-  .plist { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .plist { background: transparent; }
+  .pg { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden; margin-top: var(--sp-4); }
   .lhead, .crow { display: grid; grid-template-columns: minmax(0, 1.4fr) 196px minmax(0, 1.1fr); column-gap: var(--sp-4); align-items: center; padding-left: var(--sp-5); padding-right: var(--sp-5); }
-  .lhead { height: 36px; border-bottom: 1px solid var(--border); font-size: var(--fs-meta); font-weight: 600; color: var(--text-2); }
-  .pg-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); padding: var(--sp-3) var(--sp-5); background: var(--bg); border-bottom: 1px solid var(--border); }
-  .pg + .pg .pg-head { border-top: 1px solid var(--border); }
+  .lhead { height: 28px; padding-left: calc(var(--sp-5) + 1px); padding-right: calc(var(--sp-5) + 1px); font-size: var(--fs-meta); font-weight: 600; color: var(--text-2); }
+  .pg-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); padding: var(--sp-3) var(--sp-5); background: color-mix(in srgb, var(--text) 8%, var(--surface)); border-bottom: 1px solid var(--border-strong); }
   .pg-head h3 { margin: 0; font-size: var(--fs-body); line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
   .pg-meta { margin-left: auto; color: var(--text-2); font-size: var(--fs-meta); white-space: nowrap; }
   .crow { min-height: 52px; padding-top: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border); cursor: pointer; }
