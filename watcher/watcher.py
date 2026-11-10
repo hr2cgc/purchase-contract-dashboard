@@ -10,6 +10,7 @@
 실행:  python watcher\\watcher.py            (계속 실행)
        python watcher\\watcher.py --once     (한 번만 확인하고 종료)
        python watcher\\watcher.py --dry-run  (업로드 없이 변환 결과만 확인)
+       python watcher\\watcher.py --diagnose (파일 읽기 방법별 성공/실패 진단)
 """
 import sys, os, json, time, hashlib, shutil, tempfile, pathlib, datetime, urllib.request, urllib.error, traceback
 
@@ -79,31 +80,90 @@ def kv_put(cfg, key, obj):
         raise RuntimeError(f"KV 업로드 실패: {res.get('errors')}")
 
 
-def snapshot(path, retries=6, wait=2.0):
-    """엑셀이 열려 있거나 동기화 중이어도 읽을 수 있게 임시 폴더로 복사. 실패하면 잠시 후 재시도."""
-    last = None
-    for _ in range(retries):
-        try:
-            st = os.stat(path)
+def _copy_plain(path, dst):
+    shutil.copyfile(path, dst)
+
+
+def _copy_shared(path, dst):
+    """Windows: 다른 프로그램(Excel/OneDrive)이 열어 둔 파일도 읽기 공유 플래그를 모두 주고 열어서 복사."""
+    if os.name != "nt":
+        raise OSError("windows only")
+    import ctypes
+    from ctypes import wintypes
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateFileW.restype = wintypes.HANDLE
+    k32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID,
+                                wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    k32.ReadFile.argtypes = [wintypes.HANDLE, wintypes.LPVOID, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID]
+    GENERIC_READ, SHARE_ALL, OPEN_EXISTING = 0x80000000, 0x1 | 0x2 | 0x4, 3
+    h = k32.CreateFileW(path, GENERIC_READ, SHARE_ALL, None, OPEN_EXISTING, 0x80, None)
+    if h in (None, wintypes.HANDLE(-1).value, 0xFFFFFFFFFFFFFFFF):
+        raise OSError(f"CreateFile 실패(코드 {ctypes.get_last_error()})")
+    try:
+        buf, chunks = ctypes.create_string_buffer(1 << 20), []
+        n = wintypes.DWORD(0)
+        while True:
+            if not k32.ReadFile(h, buf, len(buf), ctypes.byref(n), None):
+                raise OSError(f"ReadFile 실패(코드 {ctypes.get_last_error()})")
+            if n.value == 0:
+                break
+            chunks.append(buf.raw[:n.value])
+    finally:
+        k32.CloseHandle(h)
+    data = b"".join(chunks)
+    if not data:
+        raise OSError("빈 파일(동기화 중)")
+    with open(dst, "wb") as f:
+        f.write(data)
+
+
+def _rows_from_open_excel(path):
+    """Excel 이 그 파일을 열어 둔 상태라면, 실행 중인 Excel 에서 직접 값을 읽음 (pywin32 필요: py -m pip install pywin32)."""
+    if os.name != "nt":
+        raise OSError("windows only")
+    import win32com.client  # type: ignore
+    xl = win32com.client.GetActiveObject("Excel.Application")
+    want = os.path.basename(path).lower()
+    for wb in xl.Workbooks:
+        if wb.Name.lower() == want:
+            v = wb.Worksheets(1).UsedRange.Value
+            if not isinstance(v, tuple):
+                v = ((v,),)
+            return [list(r) for r in v]
+    raise OSError("Excel 에서 해당 파일이 열려 있지 않습니다")
+
+
+def read_rows(path, retries=4, wait=2.0):
+    """읽기 방법을 차례로 시도: 일반 복사 -> 공유 읽기 -> 열려 있는 Excel 에서 직접. 모두 실패하면 이유를 모아 RuntimeError."""
+    errs = []
+    for attempt in range(retries):
+        for name, fn in (("일반복사", _copy_plain), ("공유읽기", _copy_shared)):
             d = tempfile.mkdtemp(prefix="contracts_")
             dst = os.path.join(d, "snap.xlsx")
-            shutil.copyfile(path, dst)
-            if os.path.getsize(dst) != st.st_size and os.path.getsize(dst) == 0:
-                raise OSError("빈 파일(동기화 중)")
-            return dst, st
-        except OSError as e:
-            last = e
-            time.sleep(wait)
-    raise RuntimeError(f"파일을 읽을 수 없습니다(잠김/동기화 중): {last}")
+            try:
+                fn(path, dst)
+                rows = build_data.read_xlsx(dst)
+                return rows, name
+            except build_data.InputError:
+                raise
+            except Exception as e:   # noqa: BLE001
+                errs.append(f"{name}: {type(e).__name__}: {e}")
+            finally:
+                shutil.rmtree(d, ignore_errors=True)
+        try:
+            return _rows_from_open_excel(path), "열린Excel"
+        except Exception as e:       # noqa: BLE001
+            errs.append(f"열린Excel: {type(e).__name__}: {e}")
+        time.sleep(wait)
+    uniq = list(dict.fromkeys(errs))[-4:]
+    raise RuntimeError("파일을 읽을 수 없습니다(잠김/동기화 중) -> " + " | ".join(uniq))
 
 
 def parse_file(path):
-    snap, st = snapshot(path)
-    try:
-        rows = build_data.read_xlsx(snap)
-        recs, warns = build_data.convert(rows)
-    finally:
-        shutil.rmtree(os.path.dirname(snap), ignore_errors=True)
+    st = os.stat(path)
+    rows, how = read_rows(path)
+    recs, warns = build_data.convert(rows)
+    log(f"읽기 방법: {how}") if how != "일반복사" else None
     return recs, warns, st
 
 
@@ -162,9 +222,37 @@ def heartbeat(cfg, state):
     state["hb_at"] = time.time()
 
 
+def diagnose(cfg):
+    path = cfg["xlsx_path"]
+    print("파일:", path)
+    try:
+        st = os.stat(path)
+        print(f"  존재함, 크기 {st.st_size} 바이트, 수정 {datetime.datetime.fromtimestamp(st.st_mtime, KST).isoformat(timespec='seconds')}")
+    except OSError as e:
+        print("  찾을 수 없음:", e)
+        return 1
+    for name, fn in (("일반복사", _copy_plain), ("공유읽기", _copy_shared)):
+        d = tempfile.mkdtemp(prefix="contracts_")
+        try:
+            fn(path, os.path.join(d, "snap.xlsx"))
+            print(f"  [{name}] 성공")
+        except Exception as e:   # noqa: BLE001
+            print(f"  [{name}] 실패: {type(e).__name__}: {e}")
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+    try:
+        rows = _rows_from_open_excel(path)
+        print(f"  [열린Excel] 성공 ({len(rows)}행)")
+    except Exception as e:       # noqa: BLE001
+        print(f"  [열린Excel] 실패: {type(e).__name__}: {e}")
+    return 0
+
+
 def main(argv):
     once, dry = "--once" in argv, "--dry-run" in argv
     cfg = load_config()
+    if "--diagnose" in argv:
+        return diagnose(cfg)
     state = load_state()
     log(f"감시 시작: {cfg['xlsx_path']} (확인 주기 {cfg['poll_seconds']}초)")
     first = True
