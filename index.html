@@ -941,13 +941,13 @@
   function fillSelect() {
     var groups = [], map = {};
     ROWS.forEach(function (r) { if (!map[r.project]) { map[r.project] = []; groups.push(r.project); } map[r.project].push(r); });
-    dsel.innerHTML = groups.map(function (g) {
+    dsel.innerHTML = '<option value="">계약 선택</option>' + groups.map(function (g) {
       return '<optgroup label="' + esc(g) + '">' + map[g].map(function (r) { return '<option value="' + r.id + '">' + esc(r.vendor + ' · ' + r.name) + '</option>'; }).join('') + '</optgroup>';
     }).join('');
   }
   function renderDetail() {
     var r = selId === null ? null : ROWS[selId];
-    if (!r) { dtBody.innerHTML = '<div class="empty">계약을 선택하면 엑셀 상세 기록이 표시됩니다.</div>'; return; }
+    if (!r) { dsel.value = ''; dtBody.innerHTML = '<div class="empty">위 목록에서 계약을 누르면 엑셀 상세 기록이 표시됩니다.</div>'; return; }
     dsel.value = String(selId);
     var d = describe(r), n0 = d.next[0];
     function item(label, key) { var st = stepState(r, key); return '<div><span>' + esc(label) + '</span><span class="s ' + st[1] + '">' + st[0] + '</span></div>'; }
@@ -980,7 +980,7 @@
       detailSec.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
     }
   }
-  dsel.addEventListener('change', function () { selectContract(+dsel.value, false); });
+  dsel.addEventListener('change', function () { if (dsel.value === '') { selId = null; selKey = ''; renderDetail(); markSelected(); } else selectContract(+dsel.value, false); });
   document.getElementById('toTop').addEventListener('click', function () {
     var t = document.getElementById('projTitle'); t.scrollIntoView({ block: 'start' });
     var c = projCards.querySelector('.crow.sel button.cname'); if (c) c.focus({ preventScroll: false });
@@ -1118,7 +1118,6 @@
     fillSelect();
     var keepId = null;
     if (selKey) ROWS.forEach(function (r) { if (rowKey(r) === selKey) keepId = r.id; });
-    if (keepId === null) { var f = ROWS.filter(function (r) { return !r.ext && r.issues.length; })[0] || ROWS[0]; keepId = f ? f.id : null; }
     selId = keepId; selKey = keepId !== null ? rowKey(ROWS[keepId]) : '';
     renderDetail();
     render();
