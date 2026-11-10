@@ -683,8 +683,8 @@
       [['adv_date', '선금'], ['bal_date', '잔금']].forEach(function (p) {
         var d = parse(r[p[0]]); if (!d) return;
         var n = diffDays(d);
-        if (n >= 0 && n <= 14) add('due', 10, p[1] + ' 집행(예정)일 임박', r, r[p[0]], '', n);
-        else if (n < 0) add('paycheck', 60, '지급 여부 확인 필요', r, r[p[0]], p[1] + ' 집행(예정)일 경과', n);
+        if (n >= 0 && n <= 14) add('due', 10, p[1] + ' 집행(예정) 임박', r, r[p[0]], '', n);
+        else if (n < 0) add('paycheck', 60, '지급 여부 확인 필요', r, r[p[0]], p[1] + ' 집행(예정) 경과', n);
       });
       var nextTask = { 1: '법무검토 · 품의 진행', 2: '계약서 송부 필요', 3: '계약서 회수 확인', 4: '계약보증증권 확인' }[r.stageKey];
       if (nextTask && !r.noteBlocked) {
@@ -735,7 +735,7 @@
   // ---------- 상태 설명 (계약 상태 / 지급 상태 / 다음 확인 사항 / 주요 일정) ----------
   //  - 진행률(%)이나 완료 항목 개수로 판단하지 않습니다. 기록된 값만 짧은 문장으로 풀어 씁니다.
   //  - 회색 칸 = 해당 없음·보류, 빈 칸 = 기록 없음. 어느 쪽도 '미완료 경고'로 쓰지 않습니다.
-  //  - 세금계산서·집행 품의·집행(예정)일은 지급 '준비' 기록이며 지급 완료의 근거가 아닙니다.
+  //  - 세금계산서·집행 품의·집행(예정)은 지급 '준비' 기록이며 지급 완료의 근거가 아닙니다.
   var NARA_RE = /나라장터/;
   var NOTE_SPLIT_RE = /분할|\d\s*~\s*\d\s*차|\d\s*차/;
   var NOTE_BAL100_RE = /잔금\s*\(?\s*100\s*%/;
@@ -746,8 +746,8 @@
   }
   // ---------- 현재 상태 Badge = 엑셀 순서상 다음에 처리할 항목 (모든 화면 공통) ----------
   var SEQ = [['legal', '법무검토 요청'], ['approval', '계약 품의'], ['send', '계약서 송부'], ['receive', '계약서 회수'], ['bond', '계약보증증권'],
-             ['adv_bond', '선금보증증권'], ['adv_tax', '선금 세금계산서 발행'], ['adv_appr', '선금 자금집행 품의'], ['adv_date', '선금 집행(예정)일'],
-             ['bal_tax', '잔금 세금계산서 발행'], ['bal_appr', '잔금 자금집행 품의'], ['bal_date', '잔금 집행(예정)일']];
+             ['adv_bond', '선금보증증권'], ['adv_tax', '선금 세금계산서 발행'], ['adv_appr', '선금 자금집행 품의'], ['adv_date', '선금 집행(예정)'],
+             ['bal_tax', '잔금 세금계산서 발행'], ['bal_appr', '잔금 자금집행 품의'], ['bal_date', '잔금 집행(예정)']];
   // 칸 상태: done(O·각서 대체·유효 날짜) / x / na(회색 빈칸) / blank(흰 빈칸) / unknown(그 밖의 값: 원본 보존, 확인 대상)
   function seqState(r, key) {
     var v = r[key], isDate = key === 'adv_date' || key === 'bal_date';
@@ -829,8 +829,8 @@
       else {
         [['adv_date', '선금'], ['bal_date', '잔금']].forEach(function (p) {
           var t = dateTxt(p[0], r); if (!t) return;
-          if (t.n < 0) add(3, 'late', p[1] + ' 집행(예정)일 경과 · 지급 확인', p[0]);
-          else if (t.n <= 14) add(5.5, 'soon', p[1] + ' 집행(예정)일 ' + t.t + ' · 집행 준비 확인', p[0]);
+          if (t.n < 0) add(3, 'late', p[1] + ' 집행(예정) 경과 · 지급 확인', p[0]);
+          else if (t.n <= 14) add(5.5, 'soon', p[1] + ' 집행(예정) ' + t.t + ' · 집행 준비 확인', p[0]);
         });
         if (te && te.n < 0) add(3, 'late', '계약 종료일 경과 · 종료·정산 여부 확인', 'end');
         else if (te && te.n <= 30) add(5.5, 'soon', '계약 종료일 ' + te.t + ' 임박', 'end');
@@ -869,8 +869,8 @@
     d.basis.push('비고는 현재 상태 판정에 사용하지 않습니다.');
     if (grayNames.length) d.basis.push('엑셀 회색 칸(해당 없음·보류): ' + grayNames.join(', ') + ' — 미완료로 보지 않았습니다.');
     if (r.noteBlocked) d.basis.push('X 표시는 없지만 비고에 거부·반려가 있어 \'확인 사항\'에 따로 표시했습니다(현재 상태와는 별개).');
-    d.basis.push('집행(예정)일에 날짜가 있으면 \'기록됨\'으로만 보며, 실제 지급 완료가 아닙니다.');
-    d.basis.push('세금계산서·집행 품의·집행(예정)일은 지급 준비 기록입니다. 실제 지급 완료의 근거는 아니므로 \'지급 완료\'로 표시하지 않습니다.');
+    d.basis.push('집행(예정)에 날짜가 있으면 \'기록됨\'으로만 보며, 실제 지급 완료가 아닙니다.');
+    d.basis.push('세금계산서·집행 품의·집행(예정)은 지급 준비 기록입니다. 실제 지급 완료의 근거는 아니므로 \'지급 완료\'로 표시하지 않습니다.');
     return d;
   }
   function nextLabel(k) { return (k === 'issue' || k === 'late' || k === 'hold') ? '확인 필요' : (k === 'soon' || k === 'infer') ? '확인 권장' : ''; }
@@ -963,9 +963,9 @@
       '<div class="dt-groups">' +
         '<div><h4>계약 단계</h4><div class="dt-list">' + CONTRACT_STEPS.map(function (s) { return item(s[1], s[0]); }).join('') + '</div></div>' +
         '<div><h4>선금 단계</h4><div class="dt-list">' +
-          item('선금보증증권', 'adv_bond') + item('세금계산서 발행', 'adv_tax') + item('자금집행 품의', 'adv_appr') + dateItem('집행(예정)일', 'adv_date') + '</div></div>' +
+          item('선금보증증권', 'adv_bond') + item('세금계산서 발행', 'adv_tax') + item('자금집행 품의', 'adv_appr') + dateItem('집행(예정)', 'adv_date') + '</div></div>' +
         '<div><h4>잔금 단계</h4><div class="dt-list">' +
-          item('세금계산서 발행', 'bal_tax') + item('자금집행 품의', 'bal_appr') + dateItem('집행(예정)일', 'bal_date') + '</div></div>' +
+          item('세금계산서 발행', 'bal_tax') + item('자금집행 품의', 'bal_appr') + dateItem('집행(예정)', 'bal_date') + '</div></div>' +
       '</div>' +
       '<div class="dt-sec"><h4>원본 비고</h4>' + (r.note ? '<p class="dt-note">' + esc(r.note) + '</p>' : '<p class="dt-note mut-t">비고 없음</p>') + '</div>' +
       (d.next.length > 1 ? '<div class="dt-sec"><h4>그 밖의 확인 사항</h4><ul class="dt-more">' + d.next.slice(1).map(function (x) { return '<li>' + (nextLabel(x.kind) ? esc(nextLabel(x.kind)) + ' · ' : '') + esc(x.t) + '</li>'; }).join('') + '</ul></div>' : '') +
