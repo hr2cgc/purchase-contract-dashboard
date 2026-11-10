@@ -760,13 +760,13 @@
     return 'unknown';
   }
   // 현재 상태 = 왼쪽부터 연속으로 완료·기록된 마지막 항목. 처음 나오는 미완료(흰 빈칸·X·알 수 없는 값)에서 멈춘다.
-  // 회색 빈칸(해당 없음)은 건너뛴다. 비고는 사용하지 않는다.
+  // 회색 빈칸(해당 없음)과 X(문제·예외 표시)는 건너뛴다. 비고는 사용하지 않는다.
   function currentBadge(r) {                 // -> { name, tone: prog|none, key }
     var last = null;
     for (var i = 0; i < SEQ.length; i++) {
       var st = seqState(r, SEQ[i][0]);
       if (st === 'done') last = SEQ[i];
-      else if (st === 'na') continue;
+      else if (st === 'na' || st === 'x') continue;     // 회색 칸과 X(문제·예외 표시)는 흐름을 끊지 않고 넘어감. X는 완료로 치지 않고 '확인 사항'에 따로 표시
       else break;
     }
     return last ? { name: last[1], tone: 'prog', key: last[0] } : { name: '기록 없음', tone: 'hold', key: '' };
@@ -867,7 +867,7 @@
     });
     var lastDone = ''; CONTRACT_STEPS.forEach(function (s) { if (isDone(r[s[0]])) lastDone = s[1]; });
     var grayNames = CONTRACT_STEPS.concat(ADV_STEPS, BAL_STEPS).filter(function (s) { return isNA(r, s[0]); }).map(function (s) { return s[1]; });
-    d.basis.push('현재 상태는 엑셀 진행 순서(법무검토 요청 → 계약 품의 → 계약서 송부 → 계약서 회수 → 계약보증증권 → 선금 4항목 → 잔금 3항목)를 왼쪽부터 확인해, 끊김 없이 이어서 완료·기록된 마지막 항목입니다. 뒤쪽 항목이 먼저 진행돼 있어도 앞쪽 빈칸에서 멈춥니다.');
+    d.basis.push('현재 상태는 엑셀 진행 순서(법무검토 요청 → 계약 품의 → 계약서 송부 → 계약서 회수 → 계약보증증권 → 선금 4항목 → 잔금 3항목)를 왼쪽부터 확인해, 끊김 없이 이어서 완료·기록된 마지막 항목입니다. 뒤쪽 항목이 먼저 진행돼 있어도 앞쪽 빈칸에서 멈춥니다. X(문제·예외 표시)는 완료로 치지 않지만 흐름을 끊지도 않아, 그 뒤 항목이 완료돼 있으면 계속 이어서 봅니다.');
     d.basis.push('비고는 현재 상태 판정에 사용하지 않습니다.');
     if (grayNames.length) d.basis.push('엑셀 회색 칸(해당 없음·보류): ' + grayNames.join(', ') + ' — 미완료로 보지 않았습니다.');
     if (r.noteBlocked) d.basis.push('X 표시는 없지만 비고에 거부·반려가 있어 \'확인 사항\'에 따로 표시했습니다(현재 상태와는 별개).');
