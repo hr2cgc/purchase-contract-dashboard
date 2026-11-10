@@ -443,10 +443,22 @@
   .xbtn:hover { background: var(--hover); border-color: var(--border-strong); }
 
   /* ===================== 계약 상세 (하단) ===================== */
-  .dhead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; }
-  .dctl { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
-  .dctl select { height: 32px; max-width: 340px; padding: 0 var(--sp-2); background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--radius-ctl); font: 400 var(--fs-sub)/1 var(--font); }
-  #detailSec { scroll-margin-top: var(--sp-4); }
+  dialog#detail {
+    width: min(960px, calc(100% - 32px)); max-height: calc(100vh - 48px); padding: 0; overflow: auto;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(17, 24, 39, .18);
+  }
+  dialog#detail:focus { outline: none; }
+  dialog#detail::backdrop { background: rgba(17, 24, 39, .45); }
+  dialog#detail .dt { padding: var(--sp-6); padding-right: 64px; }
+  .xclose {
+    position: sticky; top: var(--sp-3); float: right; margin: var(--sp-3) var(--sp-3) 0 0; z-index: 1;
+    width: 32px; height: 32px; padding: 0; background: var(--surface); color: var(--text-2);
+    border: 1px solid var(--border); border-radius: var(--radius-ctl); font: 400 22px/1 var(--font); cursor: pointer;
+  }
+  .xclose:hover { background: var(--hover); color: var(--text); border-color: var(--border-strong); }
+  .xclose:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
+  body:has(dialog#detail[open]) { overflow: hidden; }
   .dt-title { margin: 0; font-size: 18px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
   .dt-meta { margin-top: 2px; color: var(--text-2); font-size: var(--fs-sub); line-height: 1.5; font-variant-numeric: tabular-nums; }
   .dt-link { margin-top: var(--sp-3); padding: var(--sp-2) 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: var(--fs-sub); line-height: 1.6; overflow-wrap: anywhere; }
@@ -551,13 +563,6 @@
     </div>
   </section>
 
-  <section class="card section" id="detailSec" aria-labelledby="detailTitle">
-    <div class="card-head dhead">
-      <div><h2 id="detailTitle">계약 상세 진행 내역</h2><div class="hint">엑셀에 기록된 값을 그대로 보여 줍니다.</div></div>
-      <div class="dctl"><label class="sr" for="dsel">계약 선택</label><select id="dsel"></select><button type="button" class="xbtn" id="toTop">현황으로</button></div>
-    </div>
-    <div id="dtBody" aria-live="polite"></div>
-  </section>
   <section class="section grid-main" aria-label="우선 확인할 업무">
     <div class="card col">
       <div class="card-head">
@@ -577,6 +582,10 @@
     </div>
   </section>
 </div>
+<dialog id="detail" tabindex="-1" aria-label="계약 상세 진행 내역">
+  <button type="button" class="xclose" id="dtClose" aria-label="닫기">&times;</button>
+  <div id="dtBody"></div>
+</dialog>
 <div id="tip" role="tooltip"></div>
 
 <script src="config.js" onerror="void 0"></script>
@@ -731,7 +740,7 @@
     more.textContent = todoState.open ? '접기' : '나머지 ' + rest + '건 더 보기';
     more.setAttribute('aria-expanded', String(todoState.open));
   }
-  document.getElementById('todoList').addEventListener('click', function (e) { var i = e.target.closest('.item'); if (i && i.dataset.id) selectContract(+i.dataset.id, true); });
+  document.getElementById('todoList').addEventListener('click', function (e) { var i = e.target.closest('.item'); if (i && i.dataset.id) selectContract(+i.dataset.id); });
   document.getElementById('todoMore').addEventListener('click', function () { todoState.open = !todoState.open; renderTodo(); });
 
   // ---------- 상태 설명 (계약 상태 / 지급 상태 / 다음 확인 사항 / 주요 일정) ----------
@@ -929,7 +938,7 @@
   }
 
   // ---------- 하단: 선택한 계약의 엑셀 상세 ----------
-  var dtBody = document.getElementById('dtBody'), dsel = document.getElementById('dsel'), detailSec = document.getElementById('detailSec');
+  var dtBody = document.getElementById('dtBody'), dlg = document.getElementById('detail');
   function stepState(r, key) {
     var v = r[key];
     if (v === 'O') return ['완료', ''];
@@ -939,17 +948,9 @@
     if (isNA(r, key)) return ['해당 없음', 'mut-t'];
     return ['미기록', 'mut-t'];
   }
-  function fillSelect() {
-    var groups = [], map = {};
-    ROWS.forEach(function (r) { if (!map[r.project]) { map[r.project] = []; groups.push(r.project); } map[r.project].push(r); });
-    dsel.innerHTML = '<option value="">계약 선택</option>' + groups.map(function (g) {
-      return '<optgroup label="' + esc(g) + '">' + map[g].map(function (r) { return '<option value="' + r.id + '">' + esc(r.vendor + ' · ' + r.name) + '</option>'; }).join('') + '</optgroup>';
-    }).join('');
-  }
   function renderDetail() {
     var r = selId === null ? null : ROWS[selId];
-    if (!r) { dsel.value = ''; dtBody.innerHTML = '<div class="empty">위 목록에서 계약을 누르면 엑셀 상세 기록이 표시됩니다.</div>'; return; }
-    dsel.value = String(selId);
+    if (!r) { dtBody.innerHTML = ''; return; }
     var d = describe(r), n0 = d.next[0];
     function item(label, key) { var st = stepState(r, key); return '<div><span>' + esc(label) + '</span><span class="s ' + st[1] + '">' + st[0] + '</span></div>'; }
     function dateItem(label, key) {
@@ -973,22 +974,19 @@
       (d.next.length > 1 ? '<div class="dt-sec"><h4>그 밖의 확인 사항</h4><ul class="dt-more">' + d.next.slice(1).map(function (x) { return '<li>' + (nextLabel(x.kind) ? esc(nextLabel(x.kind)) + ' · ' : '') + esc(x.t) + '</li>'; }).join('') + '</ul></div>' : '') +
       '<details class="dt-basis"><summary>판정 근거</summary><ul>' + d.basis.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></details></div>';
   }
-  function selectContract(id, scroll) {
-    selId = id; selKey = ROWS[id] ? rowKey(ROWS[id]) : '';
+  function selectContract(id) {                // 상세를 팝업(모달)으로 연다
+    if (!ROWS[id]) return;
+    selId = id; selKey = rowKey(ROWS[id]);
     renderDetail(); markSelected();
-    if (scroll) {
-      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      detailSec.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-    }
+    if (!dlg.open) dlg.showModal();
+    dlg.focus({ preventScroll: true }); dlg.scrollTop = 0;
   }
-  dsel.addEventListener('change', function () { if (dsel.value === '') { selId = null; selKey = ''; renderDetail(); markSelected(); } else selectContract(+dsel.value, false); });
-  document.getElementById('toTop').addEventListener('click', function () {
-    var t = document.getElementById('projTitle'); t.scrollIntoView({ block: 'start' });
-    var c = projCards.querySelector('.crow.sel button.cname'); if (c) c.focus({ preventScroll: false });
-  });
+  function closeDetail() { if (dlg.open) dlg.close(); }
+  dlg.addEventListener('close', function () { selId = null; selKey = ''; markSelected(); });          // 닫히면 선택 해제
+  dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });                // 팝업 바깥(배경) 클릭 시 닫힘
+  document.getElementById('dtClose').addEventListener('click', closeDetail);
   projCards.addEventListener('click', function (e) {
-    var c = e.target.closest('.crow'); if (!c || !c.dataset.id) return;
-    if (+c.dataset.id === selId) { selId = null; selKey = ''; renderDetail(); markSelected(); } else selectContract(+c.dataset.id, true);
+    var c = e.target.closest('.crow'); if (c && c.dataset.id) selectContract(+c.dataset.id);
   });
 
   // ---------- 사업 카드 (상위: 사업 / 하위: 매입계약) ----------
@@ -1116,12 +1114,7 @@
       fq.value = keep.q; fstatus.value = keep.st;
       if (pms.indexOf(keep.pm) >= 0) fpm.value = keep.pm;
     }
-    // 선택한 계약 유지 (없으면 확인 필요 계약, 그것도 없으면 첫 계약)
-    fillSelect();
-    var keepId = null;
-    if (selKey) ROWS.forEach(function (r) { if (rowKey(r) === selKey) keepId = r.id; });
-    selId = keepId; selKey = keepId !== null ? rowKey(ROWS[keepId]) : '';
-    renderDetail();
+    if (dlg.open) dlg.close();
     render();
   }
 
