@@ -12,7 +12,7 @@
        python watcher\\watcher.py --dry-run  (업로드 없이 변환 결과만 확인)
        python watcher\\watcher.py --diagnose (파일 읽기 방법별 성공/실패 진단)
 """
-import sys, os, json, time, hashlib, shutil, tempfile, pathlib, datetime, urllib.request, urllib.error, traceback
+import sys, os, json, time, hashlib, shutil, tempfile, pathlib, datetime, urllib.request, urllib.error, traceback, importlib
 
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent / "scripts"))
@@ -231,6 +231,40 @@ def sync_once(cfg, state, dry=False, force=False):
     return "uploaded"
 
 
+UPDATE_BASE = "https://raw.githubusercontent.com/hr2cgc/purchase-contract-dashboard/main/"
+RULES_FILE = ROOT.parent / "scripts" / "build_data.py"
+
+
+def self_update_rules(cfg):
+    """엑셀 변환 규칙(scripts/build_data.py)만 GitHub 최신본으로 자동 갱신. 반환: 바뀌었으면 True.
+    - 규칙 파일만 교체하고 즉시 다시 불러오므로 재시작이 필요 없습니다.
+    - 새 파일이 문법 오류이거나 불러오기에 실패하면 원래 파일로 되돌립니다.
+    - 끄려면 config.json 에 "auto_update": false"""
+    if cfg.get("auto_update", True) is False:
+        return False
+    req = urllib.request.Request(UPDATE_BASE + "scripts/build_data.py", headers={"User-Agent": "contract-watcher"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        new = r.read()
+    if len(new) < 2000 or b"def convert" not in new or b"def read_xlsx" not in new:
+        raise ValueError("받은 규칙 파일이 올바르지 않아 무시합니다")
+    cur = RULES_FILE.read_bytes()
+    if new.replace(b"\r\n", b"\n") == cur.replace(b"\r\n", b"\n"):
+        return False
+    compile(new, "build_data.py", "exec")                        # 문법 확인
+    backup = RULES_FILE.with_suffix(".py.bak")
+    backup.write_bytes(cur)
+    RULES_FILE.write_bytes(new)
+    try:
+        importlib.reload(build_data)
+        assert hasattr(build_data, "convert") and hasattr(build_data, "read_xlsx")
+    except Exception:   # noqa: BLE001
+        RULES_FILE.write_bytes(cur)
+        importlib.reload(build_data)
+        raise
+    log("변환 규칙을 최신 버전으로 자동 갱신했습니다.")
+    return True
+
+
 def heartbeat(cfg, state):
     kv_put(cfg, "heartbeat", {"at": now_iso(), "ok": not state.get("error"), "error": state.get("error", ""),
                               "syncedAt": state.get("syncedAt", ""), "sourceModified": state.get("sourceModified", "")})
@@ -271,16 +305,25 @@ def main(argv):
     state = load_state()
     log(f"감시 시작: {cfg['xlsx_path']} (확인 주기 {cfg['poll_seconds']}초)")
     first = True
+    force_next = False
     while True:
         try:
-            result = sync_once(cfg, state, dry=dry, force=first and not state.get("hash"))
+            if not dry and time.time() - state.get("upd_at", 0) >= cfg.get("update_seconds", 600):
+                state["upd_at"] = time.time()
+                try:
+                    if self_update_rules(cfg):
+                        force_next = True         # 규칙이 바뀌었으니 같은 엑셀도 다시 변환해서 올림
+                except Exception as e:   # noqa: BLE001  (네트워크 오류 등은 조용히 넘어가고 다음에 재시도)
+                    log(f"규칙 자동 갱신 확인 실패(무시): {type(e).__name__}: {e}")
+            result = sync_once(cfg, state, dry=dry, force=(first and not state.get("hash")) or force_next)
             first = False
+            force_next = False
             if not dry:
                 err_changed = state.get("error") != state.get("hb_err")
                 if result == "uploaded" or err_changed or time.time() - state.get("hb_at", 0) >= cfg["heartbeat_seconds"]:
                     heartbeat(cfg, state)
                     state["hb_err"] = state.get("error")
-            save_state({k: v for k, v in state.items() if k not in ("hb_at", "retry_at", "err_sig")})
+            save_state({k: v for k, v in state.items() if k not in ("hb_at", "retry_at", "err_sig", "upd_at")})
         except Exception as e:  # 네트워크 오류 등: 프로그램은 계속 실행, 마지막 정상 데이터는 서버에 그대로 남음
             state["error"] = f"{type(e).__name__}: {e}"
             state["sig"] = None   # 다음 주기에 다시 시도
