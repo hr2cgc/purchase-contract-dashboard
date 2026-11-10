@@ -409,6 +409,29 @@
   .sb.done { background: var(--b-done-bg); color: var(--b-done-fg); }
   .sb.hold { background: var(--b-hold-bg); color: var(--b-hold-fg); }
   .sb.bad { background: var(--danger-soft); color: var(--danger); }
+  /* ===== 사업별 계약 목록 (한 열, 열 정렬) ===== */
+  .plist { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .lhead, .crow { display: grid; grid-template-columns: minmax(0, 1.5fr) 132px minmax(0, 1.1fr); column-gap: var(--sp-4); align-items: center; padding-left: var(--sp-5); padding-right: var(--sp-5); }
+  .lhead { height: 36px; border-bottom: 1px solid var(--border); font-size: var(--fs-meta); font-weight: 600; color: var(--text-2); }
+  .pg-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); padding: var(--sp-3) var(--sp-5); background: var(--bg); border-bottom: 1px solid var(--border); }
+  .pg + .pg .pg-head { border-top: 1px solid var(--border); }
+  .pg-head h3 { margin: 0; font-size: var(--fs-body); line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+  .pg-meta { margin-left: auto; color: var(--text-2); font-size: var(--fs-meta); white-space: nowrap; }
+  .crow { min-height: 52px; padding-top: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border); cursor: pointer; }
+  .pg .crow:last-child { border-bottom: 0; }
+  .crow:hover, .crow.sel { background: var(--hover); }
+  .crow.sel { box-shadow: inset 3px 0 0 var(--accent); }
+  button.cname { display: block; min-width: 0; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font: 400 var(--fs-body)/1.45 var(--font); color: var(--text); overflow-wrap: anywhere; }
+  button.cname b { font-weight: 600; }
+  button.cname span { color: var(--text-2); }
+  button.cname:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); border-radius: 4px; }
+  .cnext { min-width: 0; font-size: var(--fs-sub); line-height: 1.45; overflow-wrap: anywhere; }
+  @media (max-width: 820px) {
+    .lhead { display: none; }
+    .crow { grid-template-columns: auto minmax(0, 1fr); row-gap: var(--sp-1); padding-left: var(--sp-4); padding-right: var(--sp-4); }
+    .crow .cname { grid-column: 1 / -1; }
+    .pg-head { padding-left: var(--sp-4); padding-right: var(--sp-4); }
+  }
   .sub { display: block; color: var(--text-2); font-size: var(--fs-meta); line-height: 1.5; }
   .xbtn {
     height: 32px; padding: 0 var(--sp-3); white-space: nowrap; background: transparent; color: var(--accent);
@@ -519,7 +542,10 @@
       <button type="button" class="xbtn" id="freset" hidden>필터 초기화</button>
       <span class="count" id="count"></span>
     </div>
-    <div class="pgrid" id="projCards"></div>
+    <div class="plist">
+      <div class="lhead" aria-hidden="true"><span>계약</span><span>상태</span><span>다음 STEP</span></div>
+      <div id="projCards"></div>
+    </div>
   </section>
 
   <section class="card section" id="detailSec" aria-labelledby="detailTitle">
@@ -868,7 +894,7 @@
     function openCount(p) { return pmap[p].all.filter(function (r) { return !r.ext && !(r.stageKey === 5 && payState(r) !== 'wip' && payState(r) !== 'note'); }).length; }
     projects.sort(function (a, b) { return issueCount(b) - issueCount(a) || openCount(b) - openCount(a) || pmap[b].all.length - pmap[a].all.length; });
     projCards.innerHTML = '';
-    projects.forEach(function (p) { if (pmap[p].shown.length) projCards.appendChild(projectCard(p, pmap[p].all, pmap[p].shown, filtering)); });
+    projects.forEach(function (p) { if (pmap[p].shown.length) projCards.appendChild(projectCard(p, pmap[p].all, pmap[p].shown)); });
     if (!vis.length) projCards.appendChild(el('div', 'empty', '조건에 맞는 계약이 없습니다.'));
     var act = [];
     if (q) act.push('검색 "' + q + '"'); if (pm) act.push('PM ' + pm);
@@ -882,10 +908,10 @@
   });
   document.getElementById('freset').addEventListener('click', function () { fq.value = ''; fpm.value = ''; fstatus.value = ''; render(); });
   function markSelected() {
-    [].forEach.call(projCards.querySelectorAll('.ch'), function (c) {
+    [].forEach.call(projCards.querySelectorAll('.crow'), function (c) {
       var on = selId !== null && +c.dataset.id === selId;
       c.classList.toggle('sel', on);
-      var b = c.querySelector('button.ch-name'); if (b) { if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); }
+      var b = c.querySelector('button.cname'); if (b) { if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); }
     });
   }
 
@@ -944,10 +970,10 @@
   dsel.addEventListener('change', function () { selectContract(+dsel.value, false); });
   document.getElementById('toTop').addEventListener('click', function () {
     var t = document.getElementById('projTitle'); t.scrollIntoView({ block: 'start' });
-    var c = projCards.querySelector('.ch.sel button.ch-name'); if (c) c.focus({ preventScroll: false });
+    var c = projCards.querySelector('.crow.sel button.cname'); if (c) c.focus({ preventScroll: false });
   });
   projCards.addEventListener('click', function (e) {
-    var c = e.target.closest('.ch'); if (c && c.dataset.id) selectContract(+c.dataset.id, true);
+    var c = e.target.closest('.crow'); if (c && c.dataset.id) selectContract(+c.dataset.id, true);
   });
 
   // ---------- 사업 카드 (상위: 사업 / 하위: 매입계약) ----------
@@ -994,35 +1020,23 @@
   }
   function childHtml(r) {
     var d = describe(r), n0 = d.next[0];
-    return '<div class="ch" data-id="' + r.id + '"><button type="button" class="ch-name" data-id="' + r.id + '"><b>' + esc(r.vendor) + '</b> <span>·</span> <span>' + esc(r.name) + '</span></button>' +
-      '<div class="ch-line"><span class="sb ' + d.badge[1] + '">' + esc(d.badge[0]) + '</span>' +
-      (r.ext ? '' : '<span class="nx' + (d.nextWarn ? ' warn-t' : '') + '">' + esc(n0.t) + '</span>') + '</div></div>';
+    return '<div class="crow" data-id="' + r.id + '"><button type="button" class="cname" data-id="' + r.id + '"><b>' + esc(r.vendor) + '</b> <span>' + esc(r.name) + '</span></button>' +
+      '<span><span class="sb ' + d.badge[1] + '">' + esc(d.badge[0]) + '</span></span>' +
+      '<span class="cnext' + (d.nextWarn ? ' warn-t' : '') + '">' + (r.ext ? '<span class="mut-t">-</span>' : esc(n0.t)) + '</span></div>';
   }
-  function projectCard(name, all, shownRows, filtering) {
+  function projectCard(name, all, shownRows) {
     var rs = all.filter(function (r) { return !r.ext; }), extN = all.length - rs.length;
     var h = rs.filter(function (r) { return r.hold; }).length;
     var iss = rs.filter(function (r) { return r.issues.length; }).length;
-    var starts = rs.map(function (r) { return r.start; }).filter(Boolean).sort();
-    var ends = rs.map(function (r) { return r.end; }).filter(Boolean).sort();
     var pms = []; rs.forEach(function (r) { if (r.pm && pms.indexOf(r.pm) < 0) pms.push(r.pm); });
-    var meta = ['매입계약 ' + rs.length + '건' + (extN ? ' (매입 외 ' + extN + '건 별도)' : '')];
-    if (pms.length) meta.push('담당 PM ' + esc(pms.join(', ')));
     var tags = '';
     if (iss) tags += '<span class="tag warn">확인 필요 ' + iss + '건</span>';
     if (h) tags += '<span class="tag hold">홀딩 ' + h + '건</span>';
-
     var sorted = shownRows.slice().sort(function (a, b) { return childRank(a) - childRank(b); });
-    var open = !!openProj[name] || filtering;
-    var shown = open ? sorted : sorted.slice(0, PREVIEW);
-    var more = sorted.length - PREVIEW;
-    var c = el('article', 'card pcard');
-    c.innerHTML =
-      '<div class="pc-head"><h3 class="pc-title">' + esc(name) + '</h3><div class="pc-tags">' + tags + '</div></div>' +
-      '<div class="pc-meta">' + meta.join('<span class="sep">|</span>') + '</div>' +
-      '<div class="pc-list">' + shown.map(childHtml).join('') + '</div>' +
-      (more > 0 && !filtering ? '<button type="button" class="pc-more" aria-expanded="' + open + '">' + (open ? '접기' : '나머지 ' + more + '건 더 보기') + '</button>' : '');
-    var btn = c.querySelector('.pc-more');
-    if (btn) btn.addEventListener('click', function () { openProj[name] = !openProj[name]; var nc = projectCard(name, all, shownRows, filtering); c.replaceWith(nc); markSelected(); var nb = nc.querySelector('.pc-more'); if (nb) nb.focus(); });
+    var c = el('section', 'pg');
+    c.innerHTML = '<div class="pg-head"><h3>' + esc(name) + '</h3>' + tags +
+      '<span class="pg-meta">매입계약 ' + rs.length + '건' + (extN ? ' · 매입 외 ' + extN + '건' : '') + (pms.length ? ' · ' + esc(pms.join(', ')) : '') + '</span></div>' +
+      sorted.map(childHtml).join('');
     return c;
   }
 
