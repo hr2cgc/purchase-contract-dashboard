@@ -420,6 +420,7 @@
   .dot.sub { background: var(--st-1); color: #0B1F44; }
   .dot.none { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dot-empty); }
   .dot.X { background: var(--danger); color: #fff; }
+  .dot.na { background: var(--border); color: var(--text-2); }
 
   .badge {
     display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 var(--sp-2);
@@ -560,6 +561,7 @@
       <span><span class="dot sub">대</span>각서 등으로 대체</span>
       <span><span class="dot none"></span>미진행</span>
       <span><span class="dot X">×</span>문제 · 확인 필요</span>
+      <span><span class="dot na">–</span>해당 없음 · 진행 안 함 (엑셀 회색 칸)</span>
     </div>
     <div class="tablewrap">
       <table>
@@ -606,19 +608,28 @@
     { key: 5, name: '계약 체결 완료', color: 'var(--st-5)' }
   ];
   var HOLD = { key: 0, name: '홀딩', color: 'var(--hold)' };
+  var SEP = { key: 6, name: '별도 절차 진행 (송부·회수 해당 없음)', color: 'var(--progress)' };   // 예: 나라장터 등 계약서 송부·회수를 하지 않는 경우
+  var EXT = { key: 7, name: '매입 외 (매입계약 아님 · 파트너십 변경 등)', color: 'var(--text-3)' };          // 매입계약이 아닌 건: 집계에서 제외
+  var ALL_STAGES = STAGES.concat([HOLD, SEP, EXT]);
+  // 비고에 이 표현이 있으면 매입계약이 아닌 건으로 분류합니다 (필요하면 여기에 단어를 추가)
+  var EXT_RE = /파트너십|실제 수행하는 계약 아님|매입\s*(계약\s*)?아님/;
   function isDone(v) { return v === 'O' || v === '대체'; }
+  function isNA(r, key) { return !!(r.naSet && r.naSet[key]) && !r[key]; }   // 엑셀에서 회색으로 칠한 빈 칸 = 해당 없음 / 이슈로 안 함
 
   function classify(r) {
     // 가장 멀리 진행된 계약 단계를 기준으로 현재 상태 판정 (엑셀에 앞 단계가 비어 있어도 뒤 단계가 완료면 그 단계로 봄)
     var last = -1;
     CONTRACT_STEPS.forEach(function (s, i) { if (isDone(r[s[0]])) last = i; });
+    r.naSet = {}; (r.na || []).forEach(function (k) { r.naSet[k] = true; });
     r.hold = /홀딩/.test(r.note || '');
-    // 법무검토만 했거나 아무것도 없음 -> 1단계, 품의 -> 2, 송부 -> 3, 회수 -> 4, 계약보증증권까지 -> 5(체결 완료)
-    r.stageKey = r.hold ? 0 : (last <= 0 ? 1 : last + 1);
+    r.ext = !r.hold && EXT_RE.test(r.note || '');
+    r.sep = !r.hold && !r.ext && ['send', 'receive', 'bond'].every(function (k) { return isNA(r, k); });
+    // 법무검토만 했거나 아무것도 없음 -> 1단계, 품의 -> 2, 송부 -> 3, 회수 -> 4, 계약보증증권까지 -> 5(계약 체결 완료)
+    r.stageKey = r.hold ? 0 : r.ext ? 7 : r.sep ? 6 : (last <= 0 ? 1 : last + 1);
     var issues = [];
     CONTRACT_STEPS.concat(ADV_STEPS, BAL_STEPS).forEach(function (s) { if (r[s[0]] === 'X') issues.push(s[1]); });
     r.issues = issues;
-    r.stage = r.hold ? HOLD : STAGES[r.stageKey - 1];
+    r.stage = r.hold ? HOLD : r.ext ? EXT : r.sep ? SEP : STAGES[r.stageKey - 1];
   }
 
   // ---------- 툴팁 ----------
@@ -671,9 +682,10 @@
 
   // ---------- 표 ----------
   function dot(r, s) {
-    var v = r[s[0]], cls = v === 'O' ? 'O' : v === 'X' ? 'X' : v === '대체' ? 'sub' : 'none';
-    var txt = v === 'X' ? '×' : v === '대체' ? '대' : '';
-    var label = s[1] + ': ' + (v === 'O' ? '완료' : v === 'X' ? '문제 · 확인 필요' : v === '대체' ? '각서 등으로 대체' : '미진행');
+    var v = r[s[0]], na = isNA(r, s[0]);
+    var cls = v === 'O' ? 'O' : v === 'X' ? 'X' : v === '대체' ? 'sub' : na ? 'na' : 'none';
+    var txt = v === 'X' ? '×' : v === '대체' ? '대' : na ? '–' : '';
+    var label = s[1] + ': ' + (v === 'O' ? '완료' : v === 'X' ? '문제 · 확인 필요' : v === '대체' ? '각서 등으로 대체' : na ? '해당 없음 · 진행 안 함 (엑셀 회색 칸)' : '미진행');
     return '<span class="dot ' + cls + '" title="' + esc(label) + '">' + txt + '</span>';
   }
   function fmtPeriod(r) { return (r.start || r.end) ? esc(r.start || '?') + '<br>~ ' + esc(r.end || '?') : '<span class="dim">미정</span>'; }
@@ -720,24 +732,37 @@
   //    지급은 '자금집행 품의'까지만, 최종 완료는 '정보 미확인'으로 표시합니다. (추정하지 않음)
   var openProj = {};                         // 펼친 사업 (자동 갱신 후에도 유지)
   var PREVIEW = 3;                           // 접힌 상태에서 보여 줄 매입계약 수
-  function phase(r, steps) {                 // 선금/잔금 단계 요약 (품의 기준)
+  function phase(r, steps) {                 // 선금/잔금 단계 요약 (품의 기준). 회색(해당 없음) 단계는 제외하고 계산
+    var app = steps.filter(function (s) { return !isNA(r, s[0]); });
+    if (!app.length) return '해당 없음';
     var done = 0, bad = 0;
-    steps.forEach(function (s) { if (isDone(r[s[0]])) done++; if (r[s[0]] === 'X') bad++; });
+    app.forEach(function (s) { if (isDone(r[s[0]])) done++; if (r[s[0]] === 'X') bad++; });
     if (bad) return '확인 필요';
-    if (done === steps.length) return '집행 품의 완료';
-    if (done > 0) return '진행 중 ' + done + '/' + steps.length;
+    if (done === app.length) return app.some(function (s) { return /appr$/.test(s[0]); }) ? '집행 품의 완료' : '해당 단계 완료';
+    if (done > 0) return '진행 중 ' + done + '/' + app.length;
     return '미진행';
   }
-  function balDone(r) { return BAL_STEPS.every(function (s) { return isDone(r[s[0]]); }); }
+  function balState(r) {                     // 'na'(해당 없음) / 'done'(잔금 집행 품의까지 완료) / 'wip'
+    var app = BAL_STEPS.filter(function (s) { return !isNA(r, s[0]); });
+    if (!app.length) return 'na';
+    var ok = app.every(function (s) { return isDone(r[s[0]]); }) && !isNA(r, 'bal_appr');
+    return ok ? 'done' : 'wip';
+  }
+  function balDone(r) { return balState(r) === 'done'; }
+  function advNA(r) { return ADV_STEPS.every(function (s) { return isNA(r, s[0]); }); }
   function childBadge(r) {
+    if (r.ext) return ['hold', '매입 외'];
     if (r.hold) return ['hold', '홀딩'];
+    if (r.sep) return ['prog', '별도 절차 진행'];
     if (r.stageKey < 5) return ['prog', '계약 체결 진행 중'];
-    return balDone(r) ? ['signed', '체결 · 잔금 집행 품의 완료'] : ['signed', '계약 체결 완료 · 지급 진행'];
+    if (balDone(r)) return ['signed', '체결 · 잔금 집행 품의 완료'];
+    return balState(r) === 'na' && advNA(r) ? ['signed', '계약 체결 완료'] : ['signed', '계약 체결 완료 · 지급 진행'];
   }
   function childRank(r) {                    // 먼저 확인할 것부터
+    if (r.ext) return 50;
     if (r.issues.length) return 0;
-    if (!r.hold && r.stageKey < 5) return 10 + r.stageKey;
-    if (!r.hold && !balDone(r)) return 20;
+    if (!r.hold && r.stageKey < 5) return 10 + (r.sep ? 5 : r.stageKey);
+    if (!r.hold && balState(r) === 'wip') return 20;
     if (r.hold) return 30;
     return 40;
   }
@@ -753,13 +778,16 @@
       (r.issues.length ? '<div class="ch-flag">확인 필요: ' + esc(r.issues.join(', ')) + '</div>' : '') + '</div>';
   }
   function projectCard(name, rs) {
+    var all = rs, extN = rs.filter(function (r) { return r.ext; }).length;
+    rs = rs.filter(function (r) { return !r.ext; });                                            // 매입 외 건은 집계에서 제외하고 목록 끝에만 표시
     var n = rs.length;
     var signed = rs.filter(function (r) { return r.stageKey === 5; }).length;                 // 계약 체결 완료
     var balAppr = rs.filter(function (r) { return balDone(r); }).length;                        // 잔금 집행 품의 완료 (지급 완료 아님)
     var h = rs.filter(function (r) { return r.hold; }).length;
     var iss = rs.filter(function (r) { return r.issues.length; }).length;
-    var signing = rs.filter(function (r) { return !r.hold && r.stageKey < 5; }).length;
-    var payPending = rs.filter(function (r) { return !r.hold && r.stageKey === 5 && !balDone(r); }).length;
+    var sepN = rs.filter(function (r) { return r.sep; }).length;
+    var signing = rs.filter(function (r) { return !r.hold && !r.sep && r.stageKey < 5; }).length;
+    var payPending = rs.filter(function (r) { return !r.hold && r.stageKey === 5 && balState(r) === 'wip'; }).length;
 
     var starts = rs.map(function (r) { return r.start; }).filter(Boolean).sort();
     var ends = rs.map(function (r) { return r.end; }).filter(Boolean).sort();
@@ -767,25 +795,27 @@
     var meta = [];
     meta.push('매입계약 기간 <span class="num">' + (starts.length || ends.length ? esc(starts[0] || '?') + ' ~ ' + esc(ends[ends.length - 1] || '?') : '미정') + '</span>');
     if (pms.length) meta.push('담당 PM ' + esc(pms.join(', ')));
+    if (extN) meta.push('매입 외 ' + extN + '건은 집계에서 제외');
 
     var tags = '';
     if (iss) tags += '<span class="tag warn">확인 필요 ' + iss + '건</span>';
     if (h) tags += '<span class="tag hold">홀딩 ' + h + '건</span>';
 
-    var sorted = rs.slice().sort(function (a, b) { return childRank(a) - childRank(b); });
+    var sorted = all.slice().sort(function (a, b) { return childRank(a) - childRank(b); });
     var open = !!openProj[name];
     var shown = open ? sorted : sorted.slice(0, PREVIEW);
-    var more = n - PREVIEW;
+    var more = all.length - PREVIEW;
 
     var rest = [];
     if (signing) rest.push('계약 체결 진행 ' + signing + '건');
+    if (sepN) rest.push('별도 절차 진행 ' + sepN + '건');
     if (payPending) rest.push('잔금 집행 품의 전 ' + payPending + '건');
     if (h) rest.push('홀딩 ' + h + '건');
 
     // 임박 일정: 종료일 30일 이내 / 집행(예정)일 14일 이내 중 가장 가까운 것 (홀딩 제외)
     var due = null;
     rs.forEach(function (r) {
-      if (r.hold) return;
+      if (r.hold || r.ext) return;
       [['end', '계약 종료', 30], ['adv_date', '선금 집행(예정)', 14], ['bal_date', '잔금 집행(예정)', 14]].forEach(function (p) {
         var d = parse(r[p[0]]); if (!d) return;
         var k = diffDays(d);
@@ -821,14 +851,17 @@
     total = ROWS.length;
 
     // KPI
-    var done = ROWS.filter(function (r) { return r.stageKey === 5; }).length;
-    var holds = ROWS.filter(function (r) { return r.hold; }).length;
-    var inprog = total - done - holds;
-    var issueRows = ROWS.filter(function (r) { return r.issues.length; });
-    var pct = total ? Math.round(done / total * 100) : 0;
+    var extCnt = ROWS.filter(function (r) { return r.ext; }).length;
+    var P = ROWS.filter(function (r) { return !r.ext; });          // 매입계약만 집계 (매입 외 건 제외)
+    var ptotal = P.length;
+    var done = P.filter(function (r) { return r.stageKey === 5; }).length;
+    var holds = P.filter(function (r) { return r.hold; }).length;
+    var inprog = ptotal - done - holds;
+    var issueRows = P.filter(function (r) { return r.issues.length; });
+    var pct = ptotal ? Math.round(done / ptotal * 100) : 0;
     kpis.innerHTML = '';
     [
-      { l: '전체 계약', v: total, u: '건', n: '엑셀 등록 기준' },
+      { l: '전체 계약', v: ptotal, u: '건', n: extCnt ? '매입계약 기준 · 매입 외 ' + extCnt + '건 제외' : '엑셀 등록 기준' },
       { l: '계약 체결 완료', v: done, u: '건', n: '계약서 체결 기준 ' + pct + '% · 최종 완료 아님', meter: pct },
       { l: '체결 진행 중', v: inprog, u: '건', n: '홀딩 제외' },
       { l: '홀딩', v: holds, u: '건', n: '진행 보류' },
@@ -843,8 +876,8 @@
 
     // 단계별 막대
     stageBars.innerHTML = '';
-    var maxStage = Math.max.apply(null, STAGES.concat([HOLD]).map(function (s) { return ROWS.filter(function (r) { return r.stage === s; }).length; }).concat([1]));
-    STAGES.concat([HOLD]).forEach(function (s) {
+    var maxStage = Math.max.apply(null, ALL_STAGES.map(function (s) { return ROWS.filter(function (r) { return r.stage === s; }).length; }).concat([1]));
+    ALL_STAGES.forEach(function (s) {
       var rs = ROWS.filter(function (r) { return r.stage === s; });
       var row = el('div', 'brow');
       row.innerHTML = '<div class="blabel" title="' + esc(s.name) + '">' + esc(s.name) + '</div>' +
@@ -861,20 +894,21 @@
     projCards.innerHTML = '';
     var projects = [], pmap = {};
     ROWS.forEach(function (r) { if (!pmap[r.project]) { pmap[r.project] = []; projects.push(r.project); } pmap[r.project].push(r); });
-    function openCount(p) { return pmap[p].filter(function (r) { return !(r.stageKey === 5 && BAL_STEPS.every(function (s) { return isDone(r[s[0]]); })); }).length; }
-    function issueCount(p) { return pmap[p].filter(function (r) { return r.issues.length; }).length; }
+    function openCount(p) { return pmap[p].filter(function (r) { return !r.ext && !(r.stageKey === 5 && balState(r) !== 'wip'); }).length; }
+    function issueCount(p) { return pmap[p].filter(function (r) { return !r.ext && r.issues.length; }).length; }
     projects.sort(function (a, b) { return issueCount(b) - issueCount(a) || openCount(b) - openCount(a) || pmap[b].length - pmap[a].length; });
     if (!projects.length) projCards.appendChild(el('div', 'empty', '표시할 사업이 없습니다.'));
     projects.forEach(function (p) { projCards.appendChild(projectCard(p, pmap[p])); });
 
     // 임박 목록
-    var ends = ROWS.filter(function (r) { return !r.hold && parse(r.end); })
+    var ends = ROWS.filter(function (r) { return !r.hold && !r.ext && parse(r.end); })
       .map(function (r) { return { r: r, n: diffDays(parse(r.end)), date: r.end, sub: '종료일 · ' + r.stage.name }; })
       .filter(function (x) { return x.n >= 0 && x.n <= 30; })
       .sort(function (a, b) { return a.n - b.n; });
     fillList('endSoon', ends, '30일 이내 종료되는 계약이 없습니다.');
     var pays = [];
     ROWS.forEach(function (r) {
+      if (r.ext) return;
       [['adv_date', '선금'], ['bal_date', '잔금']].forEach(function (p) {
         var d = parse(r[p[0]]);
         if (d) { var n = diffDays(d); if (n >= 0 && n <= 14) pays.push({ r: r, n: n, date: r[p[0]], sub: p[1] + ' 집행(예정)' }); }
@@ -886,7 +920,7 @@
     // 필터 (데이터가 바뀌면 선택을 초기화)
     var pms = []; ROWS.forEach(function (r) { if (r.pm && pms.indexOf(r.pm) < 0) pms.push(r.pm); });
     fpm.innerHTML = '<option value="">담당 PM 전체</option>' + pms.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('');
-    fstatus.innerHTML = '<option value="">현재 상태 전체</option>' + STAGES.concat([HOLD]).map(function (s) { return '<option value="' + s.key + '">' + esc(s.name) + '</option>'; }).join('');
+    fstatus.innerHTML = '<option value="">현재 상태 전체</option>' + ALL_STAGES.map(function (s) { return '<option value="' + s.key + '">' + esc(s.name) + '</option>'; }).join('');
     fq.value = ''; fpm.value = ''; fstatus.value = ''; fissue.checked = false;
     if (keep) {                       // 자동 갱신 때는 보던 필터를 유지
       fq.value = keep.q; fstatus.value = keep.st; fissue.checked = keep.issue;
@@ -929,7 +963,21 @@
     return String(v).trim();
   }
 
-  function convertRows(rows) {
+  // 엑셀 서식에서 회색 계열 채우기인지 (build_data.py 의 규칙과 동일)
+  function grayStyle(st) {
+    if (!st || st.patternType !== 'solid' || !st.fgColor) return false;
+    var c = st.fgColor, r, g, b, v;
+    function chk(r, g, b) { return Math.max(r, g, b) - Math.min(r, g, b) <= 12 && (r + g + b) / 3 >= 100 && (r + g + b) / 3 <= 248; }
+    if (c.rgb && String(c.rgb).length >= 6) { var h = String(c.rgb).slice(-6); return chk(parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)); }
+    if (c.theme != null) {
+      var base = { 0: 255, 1: 0, 2: 231 }[c.theme]; if (base == null) return false;
+      var t = c.tint || 0; v = t < 0 ? base * (1 + t) : base + (255 - base) * t; return chk(v, v, v);
+    }
+    if (c.indexed != null) return c.indexed === 22 || c.indexed === 23 || c.indexed === 55;
+    return false;
+  }
+
+  function convertRows(rows, grayAt) {
     if (rows.length < 3) throw new Error('행이 너무 적습니다(헤더 2행 + 데이터 1행 이상 필요).');
     var header = []; for (var i = 0; i < COLS.length; i++) header.push(String(rows[1][i] == null ? '' : rows[1][i]).trim());
     var bad = [];
@@ -957,6 +1005,8 @@
         }
       });
       if (!rec.project) warns.push((n + 1) + '행: 사업명이 비어 있음');
+      rec.na = [];                       // 회색 칸 중 값이 비어 있는 칸 = 해당 없음
+      if (grayAt) for (var gi = 4; gi <= 17; gi++) { if (!rec[COLS[gi]] && grayAt(n, gi)) rec.na.push(COLS[gi]); }
       out.push(rec);
     }
     if (!out.length) throw new Error('계약 데이터가 0건입니다.');
@@ -1023,11 +1073,12 @@
     if (file.size > 20 * 1024 * 1024) return fail('파일이 너무 큽니다(20MB 이하).');
     importBtn.disabled = true; importBtn.textContent = '불러오는 중…';
     loadXlsx().then(function () { return readFile(file); }).then(function (buf) {
-      var wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      var wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellStyles: true });
       var ws = wb.Sheets[wb.SheetNames[0]];
       if (!ws) throw new Error('시트를 찾을 수 없습니다.');
       var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: true });
-      var res = convertRows(rows);
+      var rng = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+      var res = convertRows(rows, function (n, c) { var cell = ws[XLSX.utils.encode_cell({ r: rng.s.r + n, c: rng.s.c + c })]; return !!cell && grayStyle(cell.s); });
       tempView = true;
       build(res.recs);
       updatedEl.textContent = '임시 보기 (' + file.name + ')';

@@ -126,10 +126,25 @@ def _rows_from_open_excel(path):
     want = os.path.basename(path).lower()
     for wb in xl.Workbooks:
         if wb.Name.lower() == want:
-            v = wb.Worksheets(1).UsedRange.Value
+            ws = wb.Worksheets(1)
+            v = ws.UsedRange.Value
             if not isinstance(v, tuple):
                 v = ((v,),)
-            return [list(r) for r in v]
+            rows = [list(r) for r in v]
+            # 회색 칸(해당 없음) 읽기: 3행부터, start~bal_date 열 (실패해도 값 읽기는 계속)
+            for ri in range(2, len(rows)):
+                gray = []
+                try:
+                    for ci in range(build_data.NA_FIRST, build_data.NA_LAST + 1):
+                        it = ws.Cells(ri + 1, ci + 1).Interior
+                        if it.Pattern == 1 and it.ColorIndex != -4142:          # xlSolid, 채우기 있음
+                            c = int(it.Color)                                     # BGR
+                            if build_data.is_gray_rgb(c & 255, (c >> 8) & 255, (c >> 16) & 255):
+                                gray.append(ci)
+                except Exception:   # noqa: BLE001
+                    gray = []
+                rows[ri] = rows[ri][:len(build_data.COLS)] + [None] * (len(build_data.COLS) - len(rows[ri])) + [gray]
+            return rows
     raise OSError("Excel 에서 해당 파일이 열려 있지 않습니다")
 
 

@@ -27,6 +27,9 @@ HEADER_CHECK = {0: "사업명", 1: "업체명", 2: "계약명", 3: "담당 PM", 
                 6: "법무검토 요청", 7: "계약 품의", 8: "계약서 송부", 9: "계약서 회수", 10: "계약보증증권",
                 11: "선금보증증권", 14: "집행(예정)일", 18: "비고"}
 ALLOWED_MARKS = {"", "O", "X", "대체"}
+# 엑셀에서 회색으로 칠한 칸 = '해당 없음 / 이슈로 진행 안 함 / 홀딩' (진행 중이 아님).
+# 색상은 값이 아니라 서식이므로 따로 읽어서 각 행의 "na" 목록(열 이름)으로 담습니다. 값이 들어 있는 칸은 값이 우선입니다.
+NA_FIRST, NA_LAST = 4, 17            # start ~ bal_date 열만 확인 (사업명·업체명·비고 칸 색은 무시)
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -56,10 +59,46 @@ def norm_mark(v):
     return s
 
 
+def is_gray_rgb(r, g, b):
+    """연한~중간 회색(흰색·검정·색 있는 칸은 제외)."""
+    return max(r, g, b) - min(r, g, b) <= 12 and 100 <= (r + g + b) / 3 <= 248
+
+
+def _gray_openpyxl(fill):
+    """openpyxl 채우기 객체가 회색 계열이면 True. 테마색은 Office 기본 테마(흰/검정/연회색) 기준으로 계산."""
+    try:
+        if fill is None or fill.fill_type != "solid":
+            return False
+        c = fill.fgColor
+        if c.type == "rgb" and isinstance(c.rgb, str) and len(c.rgb) >= 6:
+            h = c.rgb[-6:]
+            return is_gray_rgb(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+        if c.type == "theme":
+            tint = c.tint or 0
+            base = {0: 255, 1: 0, 2: 231}.get(c.theme)      # 흰색 / 검정 / 연한 회색(lt2)
+            if base is None:
+                return False
+            v = base * (1 + tint) if tint < 0 else base + (255 - base) * tint
+            return is_gray_rgb(v, v, v)
+        if c.type == "indexed":
+            return c.indexed in (22, 23, 55)                  # 회색 계열 인덱스 색
+    except Exception:   # noqa: BLE001
+        return False
+    return False
+
+
 def read_xlsx(path):
+    """값 행 목록을 돌려줍니다. 각 행 끝(19번째 뒤)에 회색 칸의 열 번호 목록을 덧붙입니다."""
     import openpyxl
-    ws = openpyxl.load_workbook(path, data_only=True).active
-    return [list(r) for r in ws.iter_rows(values_only=True)]
+    wb = openpyxl.load_workbook(path, data_only=True)      # 서식(채우기)을 읽어야 하므로 read_only 를 쓰지 않음
+    ws = wb.active
+    rows = []
+    for r in ws.iter_rows():
+        vals = [c.value for c in r]
+        vals += [None] * (len(COLS) - len(vals))
+        gray = [i for i in range(NA_FIRST, NA_LAST + 1) if i < len(r) and _gray_openpyxl(r[i].fill)]
+        rows.append(vals[:len(COLS)] + [gray])
+    return rows
 
 
 def read_tsv(path):
@@ -89,6 +128,7 @@ def convert(rows):
     out, project, warns = [], "", []
     for n, r in enumerate(rows[2:], start=3):
         r = list(r) + [None] * (len(COLS) - len(r))
+        gray = r[len(COLS)] if len(r) > len(COLS) and isinstance(r[len(COLS)], (list, tuple)) else []
         rec = dict(zip(COLS, r[:len(COLS)]))
         if not any(rec[c] for c in ("vendor", "name")):
             continue  # 빈 줄
@@ -108,6 +148,8 @@ def convert(rows):
                 rec[c] = "" if rec[c] is None else str(rec[c]).strip()
         if not rec["project"]:
             warns.append(f"{n}행: 사업명이 비어 있음")
+        # 회색 칸 중 값이 비어 있는 칸만 '해당 없음'으로 기록
+        rec["na"] = [COLS[i] for i in gray if NA_FIRST <= i <= NA_LAST and COLS[i] != "" and rec[COLS[i]] in ("", None)]
         out.append(rec)
     if not out:
         raise InputError("계약 데이터가 0건입니다.")
