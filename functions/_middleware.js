@@ -4,6 +4,7 @@ import { SESSION_COOKIE, getCookie, verify, configured } from './_lib.js';
 export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
+  if (!configured(env)) return next();                           // 로그인 설정(MS_*, SESSION_SECRET)이 없으면 로그인 기능 꺼짐(통과)
   if (url.pathname.startsWith('/auth/')) return next();          // 로그인 흐름 자체는 통과
   if (url.pathname === '/robots.txt') return next();
 
