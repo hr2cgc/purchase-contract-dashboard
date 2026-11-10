@@ -746,8 +746,8 @@
   }
   // ---------- 현재 상태 Badge = 엑셀 순서상 다음에 처리할 항목 (모든 화면 공통) ----------
   var SEQ = [['legal', '법무검토 요청'], ['approval', '계약 품의'], ['send', '계약서 송부'], ['receive', '계약서 회수'], ['bond', '계약보증증권'],
-             ['adv_bond', '선금보증증권'], ['adv_tax', '선금 세금계산서 발행'], ['adv_appr', '선금 자금집행 품의'], ['adv_date', '선금 집행'],
-             ['bal_tax', '잔금 세금계산서 발행'], ['bal_appr', '잔금 자금집행 품의'], ['bal_date', '잔금 집행']];
+             ['adv_bond', '선금보증증권'], ['adv_tax', '선금 세금계산서 발행'], ['adv_appr', '선금 자금집행 품의'], ['adv_date', '선금 집행(예정)일'],
+             ['bal_tax', '잔금 세금계산서 발행'], ['bal_appr', '잔금 자금집행 품의'], ['bal_date', '잔금 집행(예정)일']];
   // 칸 상태: done(O·각서 대체·유효 날짜) / x / na(회색 빈칸) / blank(흰 빈칸) / unknown(그 밖의 값: 원본 보존, 확인 대상)
   function seqState(r, key) {
     var v = r[key], isDate = key === 'adv_date' || key === 'bal_date';
@@ -757,24 +757,24 @@
     if (v === 'X') return 'x';
     return 'unknown';
   }
-  function nextBadge(r) {                    // -> { name, tone: prog|bad|warn|hold|done, key }
-    if (r.ext) return { name: '매입 외', tone: 'hold', key: '' };
-    if (r.hold) return { name: '홀딩', tone: 'hold', key: '' };
-    if (r.sep && NARA_RE.test(r.note || '')) return { name: '나라장터 별도 절차', tone: 'prog', key: '' };
+  // 현재 상태 = 왼쪽부터 연속으로 완료·기록된 마지막 항목. 처음 나오는 미완료(흰 빈칸·X·알 수 없는 값)에서 멈춘다.
+  // 회색 빈칸(해당 없음)은 건너뛴다. 비고는 사용하지 않는다.
+  function currentBadge(r) {                 // -> { name, tone: prog|none, key }
+    var last = null;
     for (var i = 0; i < SEQ.length; i++) {
       var st = seqState(r, SEQ[i][0]);
-      if (st === 'x') return { name: SEQ[i][1], tone: 'bad', key: SEQ[i][0] };
-      if (st === 'unknown') return { name: SEQ[i][1], tone: 'warn', key: SEQ[i][0] };
-      if (st === 'blank') return { name: SEQ[i][1], tone: 'prog', key: SEQ[i][0] };
+      if (st === 'done') last = SEQ[i];
+      else if (st === 'na') continue;
+      else break;
     }
-    return { name: '남은 항목 없음', tone: 'done', key: '' };
+    return last ? { name: last[1], tone: 'prog', key: last[0] } : { name: '기록 없음', tone: 'hold', key: '' };
   }
   function describe(r) {
     var note = r.note || '', nara = NARA_RE.test(note);
     var d = { contract: '', situation: '', pay: [], paySub: '', payNote: '', next: [], nextWarn: false, dates: [], basis: [], hl: null };
 
     // 1) 현재 상태 = 공통 Badge 판정 (조합형 문구를 쓰지 않음)
-    var nb = nextBadge(r);
+    var nb = currentBadge(r);
     d.contract = nb.name; d.badge = [nb.name, nb.tone];
 
     // 2) 지급 관련 (준비 상태만. 실제 지급 확인 정보는 엑셀에 없음)
@@ -819,10 +819,11 @@
     var te = dateTxt('end', r);
     if (!r.ext) {
       var unk = SEQ.filter(function (q) { return seqState(r, q[0]) === 'unknown'; });
-      var badOther = SEQ.filter(function (q) { return r[q[0]] === 'X' && q[0] !== nb.key; }).map(function (q) { return q[1]; });
+      var badOther = SEQ.filter(function (q) { return r[q[0]] === 'X'; }).map(function (q) { return q[1]; });
       if (badOther.length) add(1, 'issue', badOther.join(', ') + ' 문제 표시 (X)');
       if (unk.length) add(1, 'issue', unk.map(function (q) { return q[1] + ' 값 확인 (원본: ' + r[q[0]] + ')'; }).join(', '));
       if (bad.length && note) add(1, 'issue', '비고 · ' + note);
+      if (r.ext) add(1, 'none', '');
       if (r.noteBlocked) add(1, 'issue', '비고의 거부·반려 내용 확인');
       if (r.hold) add(2, 'hold', '홀딩 · 재개 여부 확인' + (note ? ' (비고 참조)' : ''));
       else {
@@ -864,12 +865,10 @@
     });
     var lastDone = ''; CONTRACT_STEPS.forEach(function (s) { if (isDone(r[s[0]])) lastDone = s[1]; });
     var grayNames = CONTRACT_STEPS.concat(ADV_STEPS, BAL_STEPS).filter(function (s) { return isNA(r, s[0]); }).map(function (s) { return s[1]; });
-    d.basis.push('현재 상태는 엑셀 진행 순서(법무검토 요청 → 계약 품의 → 계약서 송부 → 계약서 회수 → 계약보증증권 → 선금 4항목 → 잔금 3항목)에서 왼쪽부터 처음 나오는 미완료 항목입니다. 뒤쪽 항목이 완료돼 있어도 앞쪽 빈 항목이 우선입니다.');
-    if (r.ext) d.basis.push('비고에 파트너십·매입 아님 표현이 있어 \'매입 외\'로 분류하고 집계에서 제외했습니다.');
-    else if (r.hold) d.basis.push('비고에 \'홀딩\'이 있어 \'홀딩\'으로 표시했습니다.');
-    else if (r.sep && nara) d.basis.push('송부·회수·계약보증증권 칸이 모두 회색이고 비고에 나라장터가 있어 별도 절차로 표시했습니다.');
+    d.basis.push('현재 상태는 엑셀 진행 순서(법무검토 요청 → 계약 품의 → 계약서 송부 → 계약서 회수 → 계약보증증권 → 선금 4항목 → 잔금 3항목)를 왼쪽부터 확인해, 끊김 없이 이어서 완료·기록된 마지막 항목입니다. 뒤쪽 항목이 먼저 진행돼 있어도 앞쪽 빈칸에서 멈춥니다.');
+    d.basis.push('비고는 현재 상태 판정에 사용하지 않습니다.');
     if (grayNames.length) d.basis.push('엑셀 회색 칸(해당 없음·보류): ' + grayNames.join(', ') + ' — 미완료로 보지 않았습니다.');
-    if (r.noteBlocked) d.basis.push('X 표시는 없지만 비고에 거부·반려가 있어 확인 필요로 분류했습니다.');
+    if (r.noteBlocked) d.basis.push('X 표시는 없지만 비고에 거부·반려가 있어 \'확인 사항\'에 따로 표시했습니다(현재 상태와는 별개).');
     d.basis.push('집행(예정)일에 날짜가 있으면 \'기록됨\'으로만 보며, 실제 지급 완료가 아닙니다.');
     d.basis.push('세금계산서·집행 품의·집행(예정)일은 지급 준비 기록입니다. 실제 지급 완료의 근거는 아니므로 \'지급 완료\'로 표시하지 않습니다.');
     return d;
