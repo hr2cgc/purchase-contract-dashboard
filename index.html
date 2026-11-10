@@ -409,9 +409,10 @@
   .sb.done { background: var(--b-done-bg); color: var(--b-done-fg); }
   .sb.hold { background: var(--b-hold-bg); color: var(--b-hold-fg); }
   .sb.bad { background: var(--danger-soft); color: var(--danger); }
+  .sb.warn { background: var(--warn-soft, var(--b-hold-bg)); color: var(--warn); }
   /* ===== 사업별 계약 목록 (한 열, 열 정렬) ===== */
   .plist { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-  .lhead, .crow { display: grid; grid-template-columns: minmax(0, 1.5fr) 132px minmax(0, 1.1fr); column-gap: var(--sp-4); align-items: center; padding-left: var(--sp-5); padding-right: var(--sp-5); }
+  .lhead, .crow { display: grid; grid-template-columns: minmax(0, 1.4fr) 196px minmax(0, 1.1fr); column-gap: var(--sp-4); align-items: center; padding-left: var(--sp-5); padding-right: var(--sp-5); }
   .lhead { height: 36px; border-bottom: 1px solid var(--border); font-size: var(--fs-meta); font-weight: 600; color: var(--text-2); }
   .pg-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); padding: var(--sp-3) var(--sp-5); background: var(--bg); border-bottom: 1px solid var(--border); }
   .pg + .pg .pg-head { border-top: 1px solid var(--border); }
@@ -533,7 +534,7 @@
   <section class="section" aria-labelledby="projTitle">
     <div class="sec-head">
       <h2 id="projTitle">사업별 매입계약 현황</h2>
-      <div class="hint">현재 상황과 다음 STEP · 계약을 누르면 아래에 엑셀 상세 기록이 열립니다</div>
+      <div class="hint">현재 상태는 다음에 처리할 항목입니다 · 계약을 누르면 아래에 엑셀 상세 기록이 열립니다</div>
     </div>
     <div class="filters" id="filters">
       <input type="search" id="q" placeholder="사업명 · 업체명 · 계약명 검색" aria-label="검색">
@@ -543,7 +544,7 @@
       <span class="count" id="count"></span>
     </div>
     <div class="plist">
-      <div class="lhead" aria-hidden="true"><span>계약</span><span>상태</span><span>다음 STEP</span></div>
+      <div class="lhead" aria-hidden="true"><span>계약</span><span>상태</span><span>확인 사항</span></div>
       <div id="projCards"></div>
     </div>
   </section>
@@ -617,14 +618,14 @@
 
   function classify(r) {
     // 가장 멀리 진행된 계약 단계를 기준으로 현재 상태 판정 (엑셀에 앞 단계가 비어 있어도 뒤 단계가 완료면 그 단계로 봄)
-    var last = -1;
-    CONTRACT_STEPS.forEach(function (s, i) { if (isDone(r[s[0]])) last = i; });
     r.naSet = {}; (r.na || []).forEach(function (k) { r.naSet[k] = true; });
+    var firstInc = -1;      // 계약 단계 중 처음으로 완료되지 않은 항목 (회색 해당 없음 칸은 건너뜀)
+    CONTRACT_STEPS.forEach(function (s, i) { if (firstInc < 0 && !isDone(r[s[0]]) && !isNA(r, s[0])) firstInc = i; });
     r.hold = /홀딩/.test(r.note || '');
     r.ext = !r.hold && EXT_RE.test(r.note || '');
     r.sep = !r.hold && !r.ext && ['send', 'receive', 'bond'].every(function (k) { return isNA(r, k); });
     // 법무검토만 했거나 아무것도 없음 -> 1단계, 품의 -> 2, 송부 -> 3, 회수 -> 4, 계약보증증권까지 -> 5(계약 체결 완료)
-    r.stageKey = r.hold ? 0 : r.ext ? 7 : r.sep ? 6 : (last <= 0 ? 1 : last + 1);
+    r.stageKey = r.hold ? 0 : r.ext ? 7 : r.sep ? 6 : (firstInc < 0 ? 5 : firstInc <= 1 ? 1 : firstInc);
     var issues = [];
     CONTRACT_STEPS.concat(ADV_STEPS, BAL_STEPS).forEach(function (s) { if (r[s[0]] === 'X') issues.push(s[1]); });
     // 엑셀에 X 표시는 없지만 비고에 '거부·반려'가 적혀 있으면 확인 필요로 봅니다 (예: 변경합의서를 업체가 거부)
@@ -743,19 +744,38 @@
     var n = diffDays(d);
     return { date: r[key], n: n, t: n === 0 ? '오늘' : n > 0 ? 'D-' + n : '경과' };
   }
+  // ---------- 현재 상태 Badge = 엑셀 순서상 다음에 처리할 항목 (모든 화면 공통) ----------
+  var SEQ = [['legal', '법무검토 요청'], ['approval', '계약 품의'], ['send', '계약서 송부'], ['receive', '계약서 회수'], ['bond', '계약보증증권'],
+             ['adv_bond', '선금보증증권'], ['adv_tax', '선금 세금계산서 발행'], ['adv_appr', '선금 자금집행 품의'], ['adv_date', '선금 집행'],
+             ['bal_tax', '잔금 세금계산서 발행'], ['bal_appr', '잔금 자금집행 품의'], ['bal_date', '잔금 집행']];
+  // 칸 상태: done(O·각서 대체·유효 날짜) / x / na(회색 빈칸) / blank(흰 빈칸) / unknown(그 밖의 값: 원본 보존, 확인 대상)
+  function seqState(r, key) {
+    var v = r[key], isDate = key === 'adv_date' || key === 'bal_date';
+    if (!v) return isNA(r, key) ? 'na' : 'blank';
+    if (isDate) return parse(v) ? 'done' : 'unknown';
+    if (v === 'O' || v === '대체') return 'done';
+    if (v === 'X') return 'x';
+    return 'unknown';
+  }
+  function nextBadge(r) {                    // -> { name, tone: prog|bad|warn|hold|done, key }
+    if (r.ext) return { name: '매입 외', tone: 'hold', key: '' };
+    if (r.hold) return { name: '홀딩', tone: 'hold', key: '' };
+    if (r.sep && NARA_RE.test(r.note || '')) return { name: '나라장터 별도 절차', tone: 'prog', key: '' };
+    for (var i = 0; i < SEQ.length; i++) {
+      var st = seqState(r, SEQ[i][0]);
+      if (st === 'x') return { name: SEQ[i][1], tone: 'bad', key: SEQ[i][0] };
+      if (st === 'unknown') return { name: SEQ[i][1], tone: 'warn', key: SEQ[i][0] };
+      if (st === 'blank') return { name: SEQ[i][1], tone: 'prog', key: SEQ[i][0] };
+    }
+    return { name: '남은 항목 없음', tone: 'done', key: '' };
+  }
   function describe(r) {
     var note = r.note || '', nara = NARA_RE.test(note);
     var d = { contract: '', situation: '', pay: [], paySub: '', payNote: '', next: [], nextWarn: false, dates: [], basis: [], hl: null };
 
-    // 1) 계약 상태
-    if (r.ext) d.contract = '매입 외 (집계 제외)';
-    else if (r.hold) d.contract = '홀딩';
-    else if (r.sep) d.contract = (isDone(r.approval) ? '품의 완료 · ' : '') + (nara ? '나라장터로 별도 진행' : '송부·회수 없이 별도 진행');
-    else if (r.stageKey === 1) d.contract = isDone(r.legal) ? '법무검토 완료 · 품의 대기' : isNA(r, 'legal') ? '품의 전 (법무검토 해당 없음)' : '법무검토 · 품의 전';
-    else if (r.stageKey === 2) d.contract = '품의 완료 · 계약서 송부 대기';
-    else if (r.stageKey === 3) d.contract = '송부 완료 · 회수 대기';
-    else if (r.stageKey === 4) d.contract = r.bond === 'X' ? '회수 완료 · 보증증권 문제' : '회수 완료 · 보증증권 확인 필요';
-    else d.contract = '계약 체결 단계 완료' + (r.bond === '대체' ? ' (보증증권은 각서 등으로 대체)' : '');
+    // 1) 현재 상태 = 공통 Badge 판정 (조합형 문구를 쓰지 않음)
+    var nb = nextBadge(r);
+    d.contract = nb.name; d.badge = [nb.name, nb.tone];
 
     // 2) 지급 관련 (준비 상태만. 실제 지급 확인 정보는 엑셀에 없음)
     function part(label, steps) {
@@ -790,13 +810,7 @@
     }
 
     // 상단에 쓰는 한 줄 현재 상황
-    var bt = r.ext ? ['매입 외', 'hold'] : r.hold ? ['홀딩', 'hold'] : r.sep ? ['별도 진행', 'prog'] :
-      r.stageKey === 1 ? ['품의 전', 'prog'] : r.stageKey === 2 ? ['송부 대기', 'prog'] : r.stageKey === 3 ? ['회수 대기', 'prog'] :
-      r.stageKey === 4 ? [r.bond === 'X' ? '보증증권 문제' : '보증증권 대기', 'prog'] : ['체결 단계 완료', 'done'];
-    if (!r.ext && r.issues.length) bt[1] = 'bad';
-    d.badge = bt;
     d.situation = d.contract;
-    if (!r.hold && !r.ext && r.stageKey === 5) d.situation += d.payNote ? ' · ' + d.payNote : '';
 
     // 3) 다음 STEP: 우선순위 = 문제·예외 > 경과 일정 > 임박 일정 > 일반 계약 절차 > 그 밖의 확인 권장
     var bad = []; CONTRACT_STEPS.concat(ADV_STEPS, BAL_STEPS).forEach(function (s) { if (r[s[0]] === 'X') bad.push(s[1]); });
@@ -804,7 +818,11 @@
     function add(rank, kind, t, key) { items.push({ rank: rank, kind: kind, t: t, key: key || '' }); }
     var te = dateTxt('end', r);
     if (!r.ext) {
-      if (bad.length) add(1, 'issue', bad.join(', ') + ' 문제 확인');
+      var unk = SEQ.filter(function (q) { return seqState(r, q[0]) === 'unknown'; });
+      var badOther = SEQ.filter(function (q) { return r[q[0]] === 'X' && q[0] !== nb.key; }).map(function (q) { return q[1]; });
+      if (badOther.length) add(1, 'issue', badOther.join(', ') + ' 문제 표시 (X)');
+      if (unk.length) add(1, 'issue', unk.map(function (q) { return q[1] + ' 값 확인 (원본: ' + r[q[0]] + ')'; }).join(', '));
+      if (bad.length && note) add(1, 'issue', '비고 · ' + note);
       if (r.noteBlocked) add(1, 'issue', '비고의 거부·반려 내용 확인');
       if (r.hold) add(2, 'hold', '홀딩 · 재개 여부 확인' + (note ? ' (비고 참조)' : ''));
       else {
@@ -815,18 +833,13 @@
         });
         if (te && te.n < 0) add(3, 'late', '계약 종료일 경과 · 종료·정산 여부 확인', 'end');
         else if (te && te.n <= 30) add(5.5, 'soon', '계약 종료일 ' + te.t + ' 임박', 'end');
-        if (r.sep) add(5, 'step', nara ? '나라장터 계약 진행 확인' : '별도 절차 진행 확인');
-        else if (r.stageKey === 1) add(5, 'step', '품의 진행 확인');
-        else if (r.stageKey === 2) add(5, 'step', '계약서 송부 확인');
-        else if (r.stageKey === 3) add(5, 'step', '계약서 회수 확인');
-        else if (r.stageKey === 4 && r.bond !== 'X') add(5, 'step', '계약보증증권 확인');
-        if (!r.sep && r.stageKey < 5 && (isDone(r.adv_tax) || isDone(r.adv_appr))) add(6, 'infer', '계약 체결 전에 선금 절차가 기록됨 · 순서 확인');
+        
         if (NOTE_SPLIT_RE.test(note)) add(6, 'infer', '분할 지급 일정은 비고 확인');
         else if (NOTE_BAL100_RE.test(note)) add(6, 'infer', '잔금 100% 조건은 비고 확인');
       }
       items.sort(function (x, y) { return x.rank - y.rank; });
-      if (!items.length) items.push({ rank: 9, kind: 'none', t: '기록상 후속 업무 없음', key: '' });
-    } else items.push({ rank: 9, kind: 'none', t: '확인 대상 아님 (매입계약 아님)', key: '' });
+      if (!items.length) items.push({ rank: 9, kind: 'none', t: '', key: '' });
+    } else items.push({ rank: 9, kind: 'none', t: '', key: '' });
     d.next = items; d.nextWarn = items[0].kind === 'issue';
 
     // 4) 상단에 한 가지만 강조: 문제가 있으면 원본 기록, 없으면 가까운 일정
@@ -851,14 +864,13 @@
     });
     var lastDone = ''; CONTRACT_STEPS.forEach(function (s) { if (isDone(r[s[0]])) lastDone = s[1]; });
     var grayNames = CONTRACT_STEPS.concat(ADV_STEPS, BAL_STEPS).filter(function (s) { return isNA(r, s[0]); }).map(function (s) { return s[1]; });
-    if (r.ext) d.basis.push('비고에 파트너십·매입 아님 표현이 있어 매입계약 집계에서 제외했습니다.');
-    else if (r.hold) d.basis.push('비고에 \'홀딩\'이 있어 홀딩으로 분류했습니다. 일반 다음 단계는 표시하지 않습니다.');
-    else if (r.sep) d.basis.push('계약서 송부·회수·계약보증증권 칸이 모두 회색(해당 없음)이라 별도 절차로 분류했습니다.' + (nara ? ' 비고에 나라장터 언급이 있습니다.' : ''));
-    else d.basis.push(lastDone ? '현재 상황은 완료로 기록된 가장 마지막 계약 단계(' + lastDone + ')를 기준으로 했습니다.' : '완료로 기록된 계약 단계가 없습니다.');
-    if (!r.hold && !r.ext && !r.sep && r.stageKey === 5) d.basis.push('계약보증증권까지 기록되어 \'체결 단계 완료\'로 봅니다. 체결 확정 여부는 별도 확인이 필요합니다.');
+    d.basis.push('현재 상태는 엑셀 진행 순서(법무검토 요청 → 계약 품의 → 계약서 송부 → 계약서 회수 → 계약보증증권 → 선금 4항목 → 잔금 3항목)에서 왼쪽부터 처음 나오는 미완료 항목입니다. 뒤쪽 항목이 완료돼 있어도 앞쪽 빈 항목이 우선입니다.');
+    if (r.ext) d.basis.push('비고에 파트너십·매입 아님 표현이 있어 \'매입 외\'로 분류하고 집계에서 제외했습니다.');
+    else if (r.hold) d.basis.push('비고에 \'홀딩\'이 있어 \'홀딩\'으로 표시했습니다.');
+    else if (r.sep && nara) d.basis.push('송부·회수·계약보증증권 칸이 모두 회색이고 비고에 나라장터가 있어 별도 절차로 표시했습니다.');
     if (grayNames.length) d.basis.push('엑셀 회색 칸(해당 없음·보류): ' + grayNames.join(', ') + ' — 미완료로 보지 않았습니다.');
     if (r.noteBlocked) d.basis.push('X 표시는 없지만 비고에 거부·반려가 있어 확인 필요로 분류했습니다.');
-    d.basis.push('다음 STEP 우선순위: 문제·예외 → 경과한 일정 → 일반 계약 절차 → 임박한 일정(집행 14일·종료 30일 이내) → 비고 기반 확인 권장. 임박한 일정은 일반 계약 절차가 남아 있으면 상단의 일정 강조 줄에 따로 표시합니다.');
+    d.basis.push('집행(예정)일에 날짜가 있으면 \'기록됨\'으로만 보며, 실제 지급 완료가 아닙니다.');
     d.basis.push('세금계산서·집행 품의·집행(예정)일은 지급 준비 기록입니다. 실제 지급 완료의 근거는 아니므로 \'지급 완료\'로 표시하지 않습니다.');
     return d;
   }
@@ -922,6 +934,7 @@
     if (v === 'O') return ['완료', ''];
     if (v === '대체') return ['각서 등으로 대체', ''];
     if (v === 'X') return ['확인 필요 (X)', 'warn-t'];
+    if (v) return ['원본 값 ' + v + ' (확인 필요)', 'warn-t'];
     if (isNA(r, key)) return ['해당 없음', 'mut-t'];
     return ['미기록', 'mut-t'];
   }
@@ -939,7 +952,7 @@
     var d = describe(r), n0 = d.next[0];
     function item(label, key) { var st = stepState(r, key); return '<div><span>' + esc(label) + '</span><span class="s ' + st[1] + '">' + st[0] + '</span></div>'; }
     function dateItem(label, key) {
-      var v = r[key], st = v ? [esc(v), ''] : isNA(r, key) ? ['해당 없음', 'mut-t'] : ['미기록', 'mut-t'];
+      var v = r[key], st = v ? (parse(v) ? [esc(v), ''] : ['원본 값 ' + esc(v) + ' (확인 필요)', 'warn-t']) : isNA(r, key) ? ['해당 없음', 'mut-t'] : ['미기록', 'mut-t'];
       return '<div><span>' + label + '</span><span class="s ' + st[1] + '">' + st[0] + '</span></div>';
     }
     var period = (r.start || r.end) ? esc(r.start || '?') + ' ~ ' + esc(r.end || '?') : '미정';
@@ -947,7 +960,7 @@
     dtBody.innerHTML = '<div class="dt">' +
       '<h3 class="dt-title">' + esc(r.vendor) + ' · ' + esc(r.name) + '</h3>' +
       '<div class="dt-meta">' + esc(r.project) + ' · 담당 PM ' + esc(r.pm || '-') + ' · 계약 기간 ' + period + '</div>' +
-      '<div class="dt-link"><span class="g"><span class="k">현재 상황</span>' + esc(d.situation) + '</span><span class="g"><span class="k">다음 STEP</span>' + (lab ? esc(lab) + ' · ' : '') + esc(n0.t) + '</span></div>' +
+      '<div class="dt-link"><span class="g"><span class="k">현재 상태</span><span class="sb ' + d.badge[1] + '">' + esc(d.badge[0]) + '</span></span></div>' +
       '<div class="dt-groups">' +
         '<div><h4>계약 단계</h4><div class="dt-list">' + CONTRACT_STEPS.map(function (s) { return item(s[1], s[0]); }).join('') + '</div></div>' +
         '<div><h4>선금 단계</h4><div class="dt-list">' +
@@ -1022,7 +1035,7 @@
     var d = describe(r), n0 = d.next[0];
     return '<div class="crow" data-id="' + r.id + '"><button type="button" class="cname" data-id="' + r.id + '"><b>' + esc(r.vendor) + '</b> <span>' + esc(r.name) + '</span></button>' +
       '<span><span class="sb ' + d.badge[1] + '">' + esc(d.badge[0]) + '</span></span>' +
-      '<span class="cnext' + (d.nextWarn ? ' warn-t' : '') + '">' + (r.ext ? '<span class="mut-t">-</span>' : esc(n0.t)) + '</span></div>';
+      '<span class="cnext' + (d.nextWarn ? ' warn-t' : '') + '">' + (n0.t ? esc(n0.t) : '<span class="mut-t">-</span>') + '</span></div>';
   }
   function projectCard(name, all, shownRows) {
     var rs = all.filter(function (r) { return !r.ext; }), extN = all.length - rs.length;
