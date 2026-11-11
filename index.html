@@ -280,12 +280,11 @@
     var r = a.r, e = parse(r.end), d = e ? days(e) : null;
     var hot = d !== null && d <= 14 && a.g !== 'none';
     var dtxt = d === null ? '' : d < 0 ? (-d) + '일 지남' : d === 0 ? '오늘' : 'D-' + d;
-    var pill = GROUPS.filter(function (g) { return g.key === a.g; })[0].pill;
     return '<article class="card ' + a.g + '" data-i="' + a.i + '" tabindex="0" role="button" aria-label="' + esc(r.vendor + ' 상세 보기') + '">' +
       '<div class="top"><div class="id"><div><span class="vendor">' + esc(r.vendor) + '</span><span class="pm">' + esc(r.pm) + '</span></div>' +
       '<div class="cname">' + esc(r.name) + '</div>' + (S.view === 'todo' ? '<div class="proj">' + esc(r.project) + '</div>' : '') + '</div>' +
       '<div class="due' + (hot ? ' hot' : '') + '">' + (e ? '<b>종료 ' + md(r.end) + '</b>' + dtxt : '<b>기간 미정</b>') + '</div></div>' +
-      '<div class="next"><span class="pill">' + pill + '</span><span class="act">' + esc(a.text) + '</span></div>' +
+      '<div class="next"><span class="act">' + esc(a.text) + '</span></div>' +
       (a.sub ? '<div class="more">' + esc(a.sub) + '</div>' : '') + '</article>';
   }
   function key(a) { var e = parse(a.r.end); return e ? e.getTime() : 9e15; }
@@ -312,22 +311,7 @@
     var shown = base.filter(function (a) { return S.grp === 'all' || a.g === S.grp; });
     var html = '';
     if (!shown.length) html = '<div class="empty">조건에 맞는 계약이 없습니다.</div>';
-    else if (S.view === 'todo') {
-      GROUPS.forEach(function (g) {
-        var list = shown.filter(function (a) { return a.g === g.key; }).sort(function (x, y) { return key(x) - key(y); });
-        if (!list.length) return;
-        var cards = '<div class="cards">' + list.map(card).join('') + '</div>';
-        if (g.key === 'none' && S.grp !== 'none') html += '<section><details><summary>' + g.title + ' <span class="sh"><span class="n">' + list.length + '</span></span></summary>' + cards + '</details></section>';
-        else html += '<section><div class="sh ' + g.cls + '"><h2>' + g.title + '</h2><span class="n">' + list.length + '건</span>' + (g.desc ? '<span class="d">' + g.desc + '</span>' : '') + '</div>' + cards + '</section>';
-      });
-    } else {
-      var order = [], map = {};
-      shown.forEach(function (a) { if (!map[a.r.project]) { map[a.r.project] = []; order.push(a.r.project); } map[a.r.project].push(a); });
-      order.forEach(function (p) {
-        var list = map[p], done = list.filter(function (a) { return a.done; }).length;
-        html += '<section><div class="proj-head"><h2>' + esc(p) + '</h2><span>' + list.length + '건 중 계약 체결 ' + done + '건</span></div><div class="cards">' + list.map(card).join('') + '</div></section>';
-      });
-    }
+    else html = '<div class="cards" style="margin-top:20px">' + shown.map(card).join('') + '</div>';
     document.getElementById('out').innerHTML = html;
     Array.prototype.forEach.call(document.querySelectorAll('#viewSeg button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === S.view)); });
   }
