@@ -183,13 +183,6 @@
     <input type="search" id="q" placeholder="업체 · 계약명 · 사업명 검색" aria-label="검색">
   </div>
   <div id="out"></div>
-  <div class="legend">
-    <span><i style="background:var(--done)"></i>완료</span>
-    <span><i style="background:var(--sub)"></i>각서 등으로 대체</span>
-    <span><i style="background:var(--urgent)"></i>문제</span>
-    <span><i style="background:var(--empty)"></i>아직</span>
-    <span style="margin-left:auto">진행 막대: 계약 5단계 · 선금 3단계 · 잔금 2단계</span>
-  </div>
 </div></div>
 
 <script src="data.js"></script>
@@ -229,8 +222,7 @@
       soon.push('잔금 세금계산서 · 집행 품의 준비');
     var g = urgent.length ? 'urgent' : wait.length ? 'wait' : mine.length ? 'mine' : soon.length ? 'soon' : 'none';
     var list = urgent.concat(wait, mine, soon);
-    var rest = list.slice(1), sub = rest.length ? '이어서: ' + rest.join(' · ') : '';
-    if (note && !used) sub = (sub ? sub + ' / ' : '') + note;
+    var sub = (note && !used) ? note : '';
     return { g: g, text: list.length ? list[0] : '지금 할 일 없음', sub: sub };
   }
 
@@ -263,9 +255,7 @@
       '<div class="cname">' + esc(r.name) + '</div>' + (S.view === 'todo' ? '<div class="proj">' + esc(r.project) + '</div>' : '') + '</div>' +
       '<div class="due' + (hot ? ' hot' : '') + '">' + (e ? '<b>종료 ' + md(r.end) + '</b>' + dtxt : '<b>기간 미정</b>') + '</div></div>' +
       '<div class="next"><span class="pill">' + pill + '</span><span class="act">' + esc(a.text) + '</span></div>' +
-      (a.sub ? '<div class="more">' + esc(a.sub) + '</div>' : '') +
-      '<div class="prog">' + cluster(r, STEPS, '계약') + cluster(r, ['adv_bond', 'adv_tax', 'adv_appr'], '선금') + cluster(r, ['bal_tax', 'bal_appr'], '잔금') +
-      (r.adv_date && days(parse(r.adv_date)) >= 0 ? '<span class="ok">선금 집행 예정 ' + md(r.adv_date) + '</span>' : '') + '</div></article>';
+      (a.sub ? '<div class="more">' + esc(a.sub) + '</div>' : '') + '</article>';
   }
   function key(a) { var e = parse(a.r.end); return e ? e.getTime() : 9e15; }
 
