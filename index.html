@@ -267,7 +267,7 @@
     { key: 'soon', cls: '', tile: '곧 잔금', title: '곧 잔금 단계', pill: '예정', desc: '선금까지 끝났고 종료일이 3주 안인 건' },
     { key: 'none', cls: '', tile: '해당 없음', title: '지금은 할 일 없음', pill: '참고', desc: '' }
   ];
-  var S = { pm: '', proj: '', q: '', grp: 'all', view: 'todo' };
+  var S = { pm: '', proj: '', q: '', grp: 'all', view: 'proj' };
 
   function seg(r, k) {
     var v = r[k], c = v === 'O' ? 'o' : v === '대체' ? 'b' : v === 'X' ? 'x' : '';
@@ -311,7 +311,13 @@
     var shown = base.filter(function (a) { return S.grp === 'all' || a.g === S.grp; });
     var html = '';
     if (!shown.length) html = '<div class="empty">조건에 맞는 계약이 없습니다.</div>';
-    else html = '<div class="cards" style="margin-top:20px">' + shown.map(card).join('') + '</div>';
+    else {
+      var order = [], map = {};
+      shown.forEach(function (a) { if (!map[a.r.project]) { map[a.r.project] = []; order.push(a.r.project); } map[a.r.project].push(a); });
+      order.forEach(function (p) {
+        html += '<section><div class="proj-head"><h2>' + esc(p) + '</h2><span>' + map[p].length + '건</span></div><div class="cards">' + map[p].map(card).join('') + '</div></section>';
+      });
+    }
     document.getElementById('out').innerHTML = html;
     Array.prototype.forEach.call(document.querySelectorAll('#viewSeg button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === S.view)); });
   }
