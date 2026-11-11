@@ -61,6 +61,7 @@
   }
 
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 400 14.5px/1.55 var(--font); }
   .gut { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   .in { max-width: 860px; margin: 0 auto; }
@@ -119,6 +120,29 @@
 
   .cards { display: grid; gap: 8px; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; }
+  .card { cursor: pointer; }
+  .card:hover { border-color: var(--text-2); }
+  .card:focus-visible { outline: 2px solid var(--mine); outline-offset: 2px; }
+
+  /* 상세 팝업: 엑셀 시트처럼 그룹 머리글 + 열 이름 + 값 */
+  .ov { position: fixed; inset: 0; z-index: 50; background: rgba(8, 14, 24, .55); display: flex; align-items: center; justify-content: center;
+        padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px)); }
+  .modal { background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 12px; width: min(1180px, 100%); max-height: 100%; display: flex; flex-direction: column; min-width: 0; }
+  .mh { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .mt { min-width: 0; overflow-wrap: anywhere; font-weight: 700; font-size: 15.5px; }
+  .mt span { display: block; font-weight: 400; font-size: 13px; color: var(--text-2); }
+  .mx { appearance: none; flex: none; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--ctl); color: var(--text); font-size: 18px; line-height: 1; cursor: pointer; }
+  .tw { overflow: auto; padding: 16px; }
+  table.xl { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+  table.xl th, table.xl td { border: 1px solid var(--line); padding: 7px 8px; vertical-align: top; text-align: center; }
+  table.xl td { white-space: nowrap; }
+  table.xl thead tr:nth-child(2) th { font-size: 12px; line-height: 1.35; }
+  table.xl thead tr:first-child th { background: var(--soon-soft); color: var(--text); font-weight: 700; }
+  table.xl thead tr:nth-child(2) th { background: var(--bg); color: var(--text-2); font-weight: 500; }
+  table.xl td.l { text-align: left; white-space: normal; min-width: 150px; max-width: 280px; overflow-wrap: anywhere; }
+  table.xl td.x { color: var(--urgent); font-weight: 700; }
+  table.xl td.o { font-weight: 700; }
+  table.xl td.e { color: var(--text-2); }
   .top { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
   .id { min-width: 0; }
   .vendor { font-weight: 700; font-size: 15.5px; }
@@ -185,6 +209,13 @@
   <div id="out"></div>
 </div></div>
 
+<div class="ov" id="ov" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt">
+    <div class="mh"><div class="mt" id="mt"></div><button type="button" class="mx" id="mx" aria-label="닫기">×</button></div>
+    <div class="tw" id="tw"></div>
+  </div>
+</div>
+
 <script src="data.js"></script>
 <script>
 (function () {
@@ -226,7 +257,7 @@
     return { g: g, text: list.length ? list[0] : '지금 할 일 없음', sub: sub };
   }
 
-  var ROWS = DATA.map(function (r) { var a = analyze(r); a.r = r; a.done = ok(r.bond) && !!r.bond; return a; });
+  var ROWS = DATA.map(function (r, i) { var a = analyze(r); a.r = r; a.i = i; a.done = ok(r.bond) && !!r.bond; return a; });
   var PMS = []; ROWS.forEach(function (a) { if (a.r.pm && PMS.indexOf(a.r.pm) < 0) PMS.push(a.r.pm); });
 
   var GROUPS = [
@@ -250,7 +281,7 @@
     var hot = d !== null && d <= 14 && a.g !== 'none';
     var dtxt = d === null ? '' : d < 0 ? (-d) + '일 지남' : d === 0 ? '오늘' : 'D-' + d;
     var pill = GROUPS.filter(function (g) { return g.key === a.g; })[0].pill;
-    return '<article class="card ' + a.g + '">' +
+    return '<article class="card ' + a.g + '" data-i="' + a.i + '" tabindex="0" role="button" aria-label="' + esc(r.vendor + ' 상세 보기') + '">' +
       '<div class="top"><div class="id"><div><span class="vendor">' + esc(r.vendor) + '</span><span class="pm">' + esc(r.pm) + '</span></div>' +
       '<div class="cname">' + esc(r.name) + '</div>' + (S.view === 'todo' ? '<div class="proj">' + esc(r.project) + '</div>' : '') + '</div>' +
       '<div class="due' + (hot ? ' hot' : '') + '">' + (e ? '<b>종료 ' + md(r.end) + '</b>' + dtxt : '<b>기간 미정</b>') + '</div></div>' +
@@ -304,6 +335,42 @@
   document.getElementById('pmSel').addEventListener('change', function (e) { S.pm = e.target.value; render(); });
   document.getElementById('projSel').addEventListener('change', function (e) { S.proj = e.target.value; render(); });
   document.getElementById('q').addEventListener('input', function (e) { S.q = e.target.value.trim().toLowerCase(); render(); });
+  // ---------- 상세 팝업 (엑셀과 같은 열 구성) ----------
+  var KEYS = ['project', 'vendor', 'name', 'pm', 'start', 'end', 'legal', 'approval', 'send', 'receive', 'bond', 'adv_bond', 'adv_tax', 'adv_appr', 'adv_date', 'bal_tax', 'bal_appr', 'bal_date', 'note'];
+  var NAMES = ['사업명', '업체명', '계약명', '담당 PM', '계약 시작일', '계약 종료일', '법무검토 요청', '계약 품의', '계약서 송부', '계약서 회수', '계약보증증권', '선금보증증권', '세금계산서 발행', '자금집행 품의', '집행(예정)일', '세금계산서 발행', '자금집행 품의', '집행(예정)일', '비고'];
+  var GRP = [['기본 정보', 4], ['계약 단계', 7], ['선금 단계', 4], ['잔금 단계', 3], ['기타', 1]];
+  var LONG = { project: 1, name: 1, note: 1 };
+  var ov = document.getElementById('ov'), lastFocus = null;
+  function openModal(i) {
+    var r = ROWS[i] && ROWS[i].r; if (!r) return;
+    document.getElementById('mt').innerHTML = esc(r.vendor) + '<span>' + esc(r.name) + '</span>';
+    var h = '<table class="xl"><thead><tr>' + GRP.map(function (g) { return '<th colspan="' + g[1] + '">' + g[0] + '</th>'; }).join('') + '</tr><tr>' +
+      NAMES.map(function (n) { return '<th>' + n + '</th>'; }).join('') + '</tr></thead><tbody><tr>' +
+      KEYS.map(function (k) {
+        var v = r[k] == null ? '' : r[k], c = LONG[k] ? 'l' : '';
+        if (v === '대체') v = '각서 대체';
+        if (v === 'X') c += ' x'; else if (v === 'O') c += ' o';
+        return '<td class="' + c + '">' + esc(v) + '</td>';
+      }).join('') + '</tr></tbody></table>';
+    document.getElementById('tw').innerHTML = h;
+    lastFocus = document.activeElement;
+    ov.hidden = false; document.body.style.overflow = 'hidden';
+    document.getElementById('mx').focus();
+  }
+  function closeModal() {
+    if (ov.hidden) return;
+    ov.hidden = true; document.body.style.overflow = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  var out = document.getElementById('out');
+  out.addEventListener('click', function (e) { var c = e.target.closest('.card'); if (c) openModal(+c.getAttribute('data-i')); });
+  out.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var c = e.target.closest && e.target.closest('.card'); if (!c || e.target !== c) return;
+    e.preventDefault(); openModal(+c.getAttribute('data-i'));
+  });
+  ov.addEventListener('click', function (e) { if (!e.target.closest('.modal') || e.target.id === 'mx') closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
   render();
 })();
 </script>
