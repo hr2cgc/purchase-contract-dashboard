@@ -197,7 +197,7 @@
 
 <div class="band gut"><div class="in">
   <h1>매입 계약 할 일</h1>
-  <div class="meta">기준일 <span id="today"></span> · 엑셀 반영일 <span id="updated"></span></div>
+  <div class="meta">기준일 <span id="today"></span> · 엑셀 반영일 <span id="updated"></span><span id="syncMeta" hidden> · <span id="syncState"></span></span></div>
 </div></div>
 
 <div class="gut"><div class="in">
@@ -216,6 +216,7 @@
   </div>
 </div>
 
+<script src="config.js" onerror="void 0"></script>
 <script src="data.js"></script>
 <script>
 (function () {
@@ -257,8 +258,13 @@
     return { g: g, text: list.length ? list[0] : '지금 할 일 없음', sub: sub };
   }
 
-  var ROWS = DATA.map(function (r, i) { var a = analyze(r); a.r = r; a.i = i; a.done = ok(r.bond) && !!r.bond; return a; });
-  var PMS = []; ROWS.forEach(function (a) { if (a.r.pm && PMS.indexOf(a.r.pm) < 0) PMS.push(a.r.pm); });
+  var ROWS = [], PMS = [], optsDirty = true;
+  function setData(rows) {
+    ROWS = (rows || []).map(function (r, i) { var a = analyze(r); a.r = r; a.i = i; a.done = ok(r.bond) && !!r.bond; return a; });
+    PMS = []; ROWS.forEach(function (a) { if (a.r.pm && PMS.indexOf(a.r.pm) < 0) PMS.push(a.r.pm); });
+    optsDirty = true;
+  }
+  setData(DATA);
 
   var GROUPS = [
     { key: 'urgent', cls: 'u', tile: '확인', title: '먼저 확인할 것', pill: '확인', desc: '문제 표시가 있거나, 종료일이 지났거나, 선금 집행이 일주일 안인 건' },
@@ -267,6 +273,7 @@
     { key: 'soon', cls: '', tile: '곧 잔금', title: '곧 잔금 단계', pill: '예정', desc: '선금까지 끝났고 종료일이 3주 안인 건' },
     { key: 'none', cls: '', tile: '해당 없음', title: '지금은 할 일 없음', pill: '참고', desc: '' }
   ];
+  var syncErr = '';
   var S = { pm: '', proj: '', q: '', grp: 'all', view: 'proj' };
 
   function seg(r, k) {
@@ -298,19 +305,20 @@
     });
     var counts = {}; GROUPS.forEach(function (g) { counts[g.key] = base.filter(function (a) { return a.g === g.key; }).length; });
 
-    var psel = document.getElementById('projSel');
-    if (!psel.options.length) {
+    var psel = document.getElementById('projSel'), sel = document.getElementById('pmSel');
+    if (optsDirty) {
       var projs = []; ROWS.forEach(function (a) { if (projs.indexOf(a.r.project) < 0) projs.push(a.r.project); });
+      if (S.proj && projs.indexOf(S.proj) < 0) S.proj = '';
+      if (S.pm && PMS.indexOf(S.pm) < 0) S.pm = '';
       psel.innerHTML = '<option value="">사업명 전체</option>' + projs.map(function (p) { return '<option value="' + esc(p) + '">' + esc(p) + '</option>'; }).join('');
-    }
-    var sel = document.getElementById('pmSel');
-    if (!sel.options.length) {
       sel.innerHTML = '<option value="">담당 PM 전체</option>' + PMS.map(function (p) { return '<option value="' + esc(p) + '">' + esc(p) + '</option>'; }).join('');
+      psel.value = S.proj; sel.value = S.pm; optsDirty = false;
     }
 
     var shown = base.filter(function (a) { return S.grp === 'all' || a.g === S.grp; });
     var html = '';
-    if (!shown.length) html = '<div class="empty">조건에 맞는 계약이 없습니다.</div>';
+    if (!ROWS.length) html = '<div class="empty">' + (window.SYNC_URL ? (syncErr ? esc(syncErr) : '데이터를 불러오는 중입니다.') : '표시할 계약이 없습니다.') + '</div>';
+    else if (!shown.length) html = '<div class="empty">조건에 맞는 계약이 없습니다.</div>';
     else {
       var order = [], map = {};
       shown.forEach(function (a) { if (!map[a.r.project]) { map[a.r.project] = []; order.push(a.r.project); } map[a.r.project].push(a); });
@@ -361,6 +369,49 @@
   });
   ov.addEventListener('click', function (e) { if (!e.target.closest('.modal') || e.target.id === 'mx') closeModal(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+  // ---------- 자동 동기화 (Cloudflare 배포본: config.js 에 SYNC_URL 이 있을 때만) ----------
+  var live = { hash: '', busy: false, okAt: 0, err: '' };
+  function clock(t) { var d = new Date(t); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }
+  function paintSync() {
+    var el = document.getElementById('syncState');
+    el.textContent = live.err ? '동기화 실패 · 마지막 정상 ' + (live.okAt ? clock(live.okAt) : '없음') : live.okAt ? '마지막 동기화 ' + clock(live.okAt) : '동기화 중…';
+  }
+  function syncNow() {
+    if (!window.SYNC_URL || live.busy) return;
+    live.busy = true;
+    var ctl = window.AbortController ? new AbortController() : null;
+    var to = setTimeout(function () { if (ctl) ctl.abort(); }, 15000);
+    fetch(window.SYNC_URL, { cache: 'no-store', credentials: 'same-origin', signal: ctl ? ctl.signal : undefined })
+      .then(function (r) {
+        var ct = r.headers.get('content-type') || '';
+        if (r.status === 401) { location.reload(); throw new Error('로그인이 필요합니다.'); }
+        if (r.redirected || ct.indexOf('json') < 0) throw new Error('로그인이 만료됐을 수 있습니다. 새로고침해 주세요.');
+        if (!r.ok) throw new Error('서버 응답 오류 (' + r.status + ')');
+        return r.json();
+      })
+      .then(function (res) {
+        if (res.error) throw new Error(res.error);
+        var d = res.data;
+        if (d && Array.isArray(d.rows) && d.hash !== live.hash) {
+          live.hash = d.hash; setData(d.rows);
+          document.getElementById('updated').textContent = (d.sourceModified || d.syncedAt || '').slice(0, 16).replace('T', ' ') || '-';
+          render();
+        }
+        live.err = ''; syncErr = ''; live.okAt = Date.now();
+      })
+      .catch(function (e) {
+        live.err = (e && e.name === 'AbortError') ? '응답 시간 초과' : (e && e.message) || '알 수 없는 오류';
+        syncErr = ROWS.length ? '' : '데이터를 불러오지 못했습니다: ' + live.err;
+        if (!ROWS.length) render();
+      })
+      .then(function () { clearTimeout(to); live.busy = false; paintSync(); });
+  }
+  if (window.SYNC_URL) {
+    document.getElementById('syncMeta').hidden = false;
+    setInterval(function () { if (!document.hidden) syncNow(); }, window.SYNC_INTERVAL_MS || 30000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) syncNow(); });
+    paintSync(); syncNow();
+  }
   render();
 })();
 </script>
