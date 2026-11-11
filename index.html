@@ -99,6 +99,10 @@
     height: 32px; width: 220px; max-width: 100%; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line);
     background: var(--ctl); color: var(--text); font: inherit; font-size: 13px;
   }
+  select {
+    height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--ctl); color: var(--text); font: inherit; font-size: 13px; min-width: 130px;
+  }
   input[type=search]::placeholder { color: var(--text-2); }
 
   /* ---------- 목록 ---------- */
@@ -172,7 +176,7 @@
 
 <div class="gut"><div class="in">
   <div class="bar">
-    <div class="seg" id="pmSeg" role="group" aria-label="담당 PM"></div>
+    <select id="pmSel" aria-label="담당 PM"></select>
     <div class="view" id="viewSeg" role="group" aria-label="보기 방식">
       <button type="button" data-v="todo" aria-pressed="true">할 일 순</button>
       <button type="button" data-v="proj" aria-pressed="false">사업별</button>
@@ -274,13 +278,10 @@
     });
     var counts = {}; GROUPS.forEach(function (g) { counts[g.key] = base.filter(function (a) { return a.g === g.key; }).length; });
 
-    var pmAll = ROWS.length;
-    document.getElementById('pmSeg').innerHTML =
-      '<button type="button" data-p="" aria-pressed="' + (S.pm === '') + '">전체<small>' + pmAll + '</small></button>' +
-      PMS.map(function (p) {
-        var n = ROWS.filter(function (a) { return a.r.pm === p; }).length;
-        return '<button type="button" data-p="' + esc(p) + '" aria-pressed="' + (S.pm === p) + '">' + esc(p) + '<small>' + n + '</small></button>';
-      }).join('');
+    var sel = document.getElementById('pmSel');
+    if (!sel.options.length) {
+      sel.innerHTML = '<option value="">담당 PM 전체</option>' + PMS.map(function (p) { return '<option value="' + esc(p) + '">' + esc(p) + '</option>'; }).join('');
+    }
 
     var shown = base.filter(function (a) { return S.grp === 'all' || a.g === S.grp; });
     var html = '';
@@ -305,9 +306,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('#viewSeg button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === S.view)); });
   }
 
-  document.getElementById('pmSeg').addEventListener('click', function (e) {
-    var b = e.target.closest('button'); if (!b) return; S.pm = b.getAttribute('data-p'); render();
-  });
+  document.getElementById('pmSel').addEventListener('change', function (e) { S.pm = e.target.value; render(); });
   document.getElementById('viewSeg').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return; S.view = b.getAttribute('data-v'); render();
   });
