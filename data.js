@@ -1,5 +1,5 @@
 // scripts/build_data.py 로 자동 생성된 파일입니다. 직접 수정하지 마세요.
-window.DATA_UPDATED = "2026-11-11";
+window.DATA_UPDATED = "2026-11-18";
 window.CONTRACTS = [
  {
   "project": "데이터허브 시범솔루션 발굴사업(경남AI관광서비스 플랫폼 구축)",
@@ -32,9 +32,9 @@ window.CONTRACTS = [
   "end": "2027-06-30",
   "legal": "O",
   "approval": "",
-  "send": "",
+  "send": "O",
   "receive": "",
-  "bond": "",
+  "bond": "O",
   "adv_bond": "",
   "adv_tax": "",
   "adv_appr": "",
@@ -54,7 +54,7 @@ window.CONTRACTS = [
   "end": "2026-12-31",
   "legal": "O",
   "approval": "O",
-  "send": "",
+  "send": "O",
   "receive": "",
   "bond": "",
   "adv_bond": "",
@@ -76,7 +76,7 @@ window.CONTRACTS = [
   "end": "2026-12-31",
   "legal": "O",
   "approval": "O",
-  "send": "",
+  "send": "O",
   "receive": "",
   "bond": "",
   "adv_bond": "",
@@ -98,7 +98,7 @@ window.CONTRACTS = [
   "end": "2026-12-31",
   "legal": "O",
   "approval": "O",
-  "send": "",
+  "send": "O",
   "receive": "",
   "bond": "",
   "adv_bond": "",
@@ -119,8 +119,8 @@ window.CONTRACTS = [
   "start": "2026-11-04",
   "end": "2026-12-22",
   "legal": "O",
-  "approval": "",
-  "send": "",
+  "approval": "O",
+  "send": "O",
   "receive": "",
   "bond": "",
   "adv_bond": "",
