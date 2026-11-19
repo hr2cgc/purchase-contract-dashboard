@@ -1,5 +1,5 @@
 // scripts/build_data.py 로 자동 생성된 파일입니다. 직접 수정하지 마세요.
-window.DATA_UPDATED = "2026-11-18";
+window.DATA_UPDATED = "2026-11-20";
 window.CONTRACTS = [
  {
   "project": "데이터허브 시범솔루션 발굴사업(경남AI관광서비스 플랫폼 구축)",
@@ -31,7 +31,7 @@ window.CONTRACTS = [
   "start": "2026-10-15",
   "end": "2027-06-30",
   "legal": "O",
-  "approval": "",
+  "approval": "O",
   "send": "O",
   "receive": "",
   "bond": "O",
@@ -64,7 +64,7 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "변경 계약 품의 진행중(나라장터로 계약 진행 예정)",
+  "note": "나라장터로 계약 진행 예정",
   "na": []
  },
  {
@@ -86,7 +86,7 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "변경 계약 품의 진행중",
+  "note": "변경선금/계약보증증권 요청",
   "na": []
  },
  {
@@ -108,7 +108,7 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "변경 계약 품의 진행중",
+  "note": "변경선금/계약보증증권 요청",
   "na": []
  },
  {
@@ -121,7 +121,7 @@ window.CONTRACTS = [
   "legal": "O",
   "approval": "O",
   "send": "O",
-  "receive": "",
+  "receive": "O",
   "bond": "",
   "adv_bond": "",
   "adv_tax": "",
@@ -438,7 +438,7 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "",
+  "note": "납품확인서 확인 요청",
   "na": []
  },
  {
@@ -548,7 +548,7 @@ window.CONTRACTS = [
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
-  "note": "보증증권 요청",
+  "note": "변경계약보증증권 요청",
   "na": []
  }
 ];
