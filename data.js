@@ -1,5 +1,5 @@
 // scripts/build_data.py 로 자동 생성된 파일입니다. 직접 수정하지 마세요.
-window.DATA_UPDATED = "2026-11-26";
+window.DATA_UPDATED = "2026-11-27";
 window.CONTRACTS = [
  {
   "project": "데이터허브 시범솔루션 발굴사업(경남AI관광서비스 플랫폼 구축)",
@@ -35,7 +35,7 @@ window.CONTRACTS = [
   "send": "O",
   "receive": "",
   "bond": "O",
-  "adv_bond": "",
+  "adv_bond": "O",
   "adv_tax": "",
   "adv_appr": "",
   "adv_date": "2026-12-10",
@@ -478,7 +478,7 @@ window.CONTRACTS = [
   "adv_bond": "",
   "adv_tax": "O",
   "adv_appr": "",
-  "adv_date": "2026-11-30",
+  "adv_date": "2026-12-10",
   "bal_tax": "",
   "bal_appr": "",
   "bal_date": "",
@@ -555,12 +555,12 @@ window.CONTRACTS = [
   "project": "클라우드 인프라 및 통합 운영 서버 공급",
   "vendor": "에스비정보기술",
   "name": "클라우드 인프라 및 통합 운영 서버 공급",
-  "pm": "-",
+  "pm": ".",
   "start": "2026-11-02",
   "end": "2026-12-31",
   "legal": "O",
   "approval": "O",
-  "send": "",
+  "send": "O",
   "receive": "",
   "bond": "",
   "adv_bond": "",
